@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="[47,)" # Matches Forge 1.20.1+
+license="MIT"
+
+[[mods]]
+modId="trainresync"
+version="1.0.0"
+displayName="Train Resync"
+authors="ashbill"
+description='''Fix out-of-sync of Create trains.'''
+
+[[dependencies.trainresync]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.trainresync]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"

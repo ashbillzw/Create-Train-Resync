@@ -1,0 +1,59 @@
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+}
+
+version = '1.0.0'
+group = 'com.ashbill'
+
+base {
+    archivesName = 'trainresync'
+}
+
+// Java 17 is required for Minecraft 1.20+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+minecraft {
+    // Use official mappings from Mojang
+    mappings channel: 'official', version: '1.20.1'
+    
+    // Optional: Enable to use Forge's generated sources
+    // runs {
+    //     client {}
+    //     server {}
+    // }
+}
+
+// ✅ Add Create repository and dependency
+repositories {
+    maven {
+        name = "tterrag maven"
+        url = "https://maven.tterrag.com/"
+    }
+}
+
+dependencies {
+    // Forge 1.20.1
+    minecraft 'net.minecraftforge:forge:1.20.1-47.2.0'
+
+    // Add Create as a dev-time dependency (won't be bundled)
+    implementation files("libs/create-0.5.1.j.jar")
+}
+
+jar {
+    manifest {
+        attributes([
+            "Specification-Title": "trainresync",
+            "Specification-Vendor": "ashbill",
+            "Implementation-Title": project.name,
+            "Implementation-Version": project.version,
+            "Implementation-Vendor": "ashbill"
+        ])
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
