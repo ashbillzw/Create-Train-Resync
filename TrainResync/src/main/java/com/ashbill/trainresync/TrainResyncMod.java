@@ -71,7 +71,7 @@ public class TrainResyncMod {
 
         ResourceKey<Level> currentDimension = mc.level.dimension();
         if (currentDimension == Level.OVERWORLD && lastDimension == Level.NETHER) {
-            if (syncCooldown == 0) showMessage("即将自动刷新");
+            if (syncCooldown == 0) showMessage("[AshBill TrainResync] 即将自动刷新");
             if (syncCooldown < 60) syncCooldown = 60;
         }
         lastDimension = currentDimension;
@@ -99,7 +99,7 @@ public class TrainResyncMod {
                             && !cc.notInPortal()
                     )
                 ){
-                    if (syncCooldown == 0) showMessage("即将自动刷新");
+                    if (syncCooldown == 0) showMessage("[AshBill TrainResync] 即将自动刷新");
                     if (syncCooldown < 40) syncCooldown = 40;
                 }
                 iter.remove();
@@ -135,6 +135,7 @@ public class TrainResyncMod {
 
     public static int silentMode() {
         messageCooldown = -2;
+        showMessage("[AshBill TrainResync] 提示已关闭", -1);
         return 0;
     }
 
