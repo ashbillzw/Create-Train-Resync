@@ -118,7 +118,7 @@ public class TrainResyncMod {
                 );
             }
 
-        } catch (Throwable t) {
+        } catch (Exception t) {
             showMessage("[AshBill TrainResync] 刷新失败（" + t.getClass().getSimpleName() + "）", -1);
         }
 
@@ -140,7 +140,7 @@ public class TrainResyncMod {
             showMessage("[AshBill TrainResync] 已刷新列车状态", 6000);
             return 0;
 
-        } catch (Throwable t) {
+        } catch (Exception t) {
             showMessage("[AshBill TrainResync] 刷新失败（" + t.getClass().getSimpleName() + "）", -1);
             return -1;
         }
