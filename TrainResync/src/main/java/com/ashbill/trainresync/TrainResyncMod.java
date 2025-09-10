@@ -64,73 +64,87 @@ public class TrainResyncMod {
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
 
-        if (event.phase != TickEvent.Phase.END) return;
+        try{
 
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null) return;
+            if (event.phase != TickEvent.Phase.END) return;
 
-        ResourceKey<Level> currentDimension = mc.level.dimension();
-        if (currentDimension == Level.OVERWORLD && lastDimension == Level.NETHER) {
-            if (syncCooldown == 0) showMessage("[AshBill TrainResync] 即将自动刷新");
-            if (syncCooldown < 60) syncCooldown = 60;
-        }
-        lastDimension = currentDimension;
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.level == null) return;
 
-        if (syncCooldown > 0) {
-            syncCooldown--;
-            if (syncCooldown == 0 && currentDimension == Level.OVERWORLD) resyncAllCarriages(); 
-        }
-
-        Iterator<Map.Entry<Entity, Integer>> iter = checkQueue.entrySet().iterator();
-        while (iter.hasNext()) {
-            Map.Entry<Entity, Integer> entry = iter.next();
-            Entity e = entry.getKey();
-            int t = entry.getValue();
-
-            if (t > 1) {
-                entry.setValue(t - 1);
+            ResourceKey<Level> currentDimension = mc.level.dimension();
+            if (currentDimension == Level.OVERWORLD && lastDimension == Level.NETHER) {
+                if (syncCooldown == 0) showMessage("[AshBill TrainResync] 即将自动刷新");
+                if (syncCooldown < 60) syncCooldown = 60;
             }
-            else {
-                if (
-                    e != null && currentDimension == Level.OVERWORLD && (
-                        e.getVehicle() instanceof CarriageContraptionEntity
-                        || e instanceof CarriageContraptionEntity cce
-                            && cce.getContraption() instanceof CarriageContraption cc
-                            && !cc.notInPortal()
-                    )
-                ){
-                    if (syncCooldown == 0) showMessage("[AshBill TrainResync] 即将自动刷新");
-                    if (syncCooldown < 40) syncCooldown = 40;
+            lastDimension = currentDimension;
+
+            if (syncCooldown > 0) {
+                syncCooldown--;
+                if (syncCooldown == 0 && currentDimension == Level.OVERWORLD) resyncAllCarriages(); 
+            }
+
+            Iterator<Map.Entry<Entity, Integer>> iter = checkQueue.entrySet().iterator();
+            while (iter.hasNext()) {
+                Map.Entry<Entity, Integer> entry = iter.next();
+                Entity e = entry.getKey();
+                int t = entry.getValue();
+
+                if (t > 1) {
+                    entry.setValue(t - 1);
                 }
-                iter.remove();
+                else {
+                    if (
+                        e != null && currentDimension == Level.OVERWORLD && (
+                            e.getVehicle() instanceof CarriageContraptionEntity
+                            || e instanceof CarriageContraptionEntity cce
+                                && cce.getContraption() instanceof CarriageContraption cc
+                                && !cc.notInPortal()
+                        )
+                    ){
+                        if (syncCooldown == 0) showMessage("[AshBill TrainResync] 即将自动刷新");
+                        if (syncCooldown < 40) syncCooldown = 40;
+                    }
+                    iter.remove();
+                }
             }
-        }
 
-        if (messageCooldown > 0) messageCooldown--;
+            if (messageCooldown > 0) messageCooldown--;
 
-        if (isDebugMode){
-            showMessage(
-                "sync: "    + syncCooldown
-            +   ", len(cQ): "   + checkQueue.size()
-            +   ", msg: "   + messageCooldown, -1
-            );
+            if (isDebugMode){
+                showMessage(
+                    "sync: "    + syncCooldown
+                +   ", len(cQ): "   + checkQueue.size()
+                +   ", msg: "   + messageCooldown, -1
+                );
+            }
+
+        } catch (Throwable t) {
+            showMessage("[AshBill TrainResync] 刷新失败（" + t.getClass().getSimpleName() + "）", -1);
         }
 
     }
 
     public static int resyncAllCarriages() {
 
-        Minecraft mc = Minecraft.getInstance();        
-        if (mc.level == null || mc.player == null) return -1;
+        try {
 
-        for (Entity e : mc.level.entitiesForRendering()) {
-            if (e instanceof CarriageContraptionEntity) {
-                e.setPos(mc.player.getX(), mc.player.getY() - 512, mc.player.getZ());
+            Minecraft mc = Minecraft.getInstance();        
+            if (mc.level == null || mc.player == null) return -1;
+
+            for (Entity e : mc.level.entitiesForRendering()) {
+                if (e instanceof CarriageContraptionEntity) {
+                    e.setPos(mc.player.getX(), mc.player.getY() - 512, mc.player.getZ());
+                }
             }
+
+            showMessage("[AshBill TrainResync] 已刷新列车状态", 6000);
+            return 0;
+
+        } catch (Throwable t) {
+            showMessage("[AshBill TrainResync] 刷新失败（" + t.getClass().getSimpleName() + "）", -1);
+            return -1;
         }
 
-        showMessage("[AshBill TrainResync] 已刷新列车状态", 6000);
-        return 0;
     }
 
     public static int silentMode() {
