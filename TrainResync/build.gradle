@@ -12,33 +12,31 @@ base {
     archivesName = 'trainresync'
 }
 
-// Java 17 is required for Minecraft 1.20+
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 minecraft {
-    // Use official mappings from Mojang
     mappings channel: 'official', version: '1.20.1'
     
-    // Optional: Enable to use Forge's generated sources
-    // runs {
-    //     client {}
-    //     server {}
-    // }
 }
 
-// ✅ Add Create repository and dependency
 repositories {
     maven {
         name = "tterrag maven"
         url = "https://maven.tterrag.com/"
     }
+    maven { url = "https://maven.ladysnake.org/releases" }
 }
 
 dependencies {
-    // Forge 1.20.1
+    compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:0.5.0"))
+    implementation(jarJar("io.github.llamalad7:mixinextras-forge:0.5.0")) {
+        jarJar.ranged(it, "[0.5.0,)")
+    }
+    
+    implementation "io.github.llamalad7:mixinextras-forge:0.3.5"
+
     minecraft 'net.minecraftforge:forge:1.20.1-47.2.0'
 
-    // Add Create as a dev-time dependency (won't be bundled)
     implementation files("libs/create-0.5.1.j.jar")
 }
 

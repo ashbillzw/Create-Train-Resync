@@ -22,3 +22,6 @@ mandatory=true
 versionRange="[1.20.1,1.21)"
 ordering="NONE"
 side="BOTH"
+
+[[mixins]]
+config="trainresync.mixins.json"
