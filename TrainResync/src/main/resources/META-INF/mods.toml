@@ -24,4 +24,5 @@ ordering="NONE"
 side="BOTH"
 
 [[mixins]]
+modId="trainresync"
 config="trainresync.mixins.json"
