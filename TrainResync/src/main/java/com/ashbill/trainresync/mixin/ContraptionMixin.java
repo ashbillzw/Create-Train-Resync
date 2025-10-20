@@ -15,7 +15,7 @@ import com.simibubi.create.content.contraptions.actors.seat.SeatBlock;
 import com.ashbill.trainresync.tags.TRTags;
 
 @Mixin(Contraption.class)
-public abstract class FakeSeatMixin {
+public abstract class ContraptionMixin {
     @Definition(id = "SeatBlock", type = SeatBlock.class)
     @Expression("? instanceof SeatBlock")
     @ModifyExpressionValue(

@@ -6,7 +6,7 @@
   "refmap": "trainresync.refmap.json",
   "plugin": "com.llamalad7.mixinextras.MixinExtrasPlugin",
   "mixins": [
-    "FakeSeatMixin"
+    "ContraptionMixin"
   ],
   "injectors": { "defaultRequire": 1 },
   "mixinextras": {"minVersion": "0.5.0"}
