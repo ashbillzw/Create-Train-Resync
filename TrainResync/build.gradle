@@ -6,7 +6,7 @@ plugins {
     id 'org.spongepowered.mixin' version '0.7.+'
 }
 
-version = '1.5.0.a'
+version = '1.5.0.b'
 group = 'com.ashbill'
 
 base {
@@ -30,6 +30,7 @@ dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.2.0'
 
     implementation files("libs/create-0.5.1.j.jar")
+    implementation files("libs/pantographsandwires-forge-1.20.1-beta-0.1.1.jar")
 
     annotationProcessor "org.spongepowered:mixin:0.8.5:processor"
 

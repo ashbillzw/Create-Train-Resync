@@ -6,7 +6,10 @@
   "refmap": "trainresync.refmap.json",
   "plugin": "com.llamalad7.mixinextras.MixinExtrasPlugin",
   "mixins": [
-    "ContraptionMixin"
+    "ContraptionMixin",
+    "TrainMixin",
+    "CarriageMixin",
+    "accessor.PantographBlockEntityAccessor"
   ],
   "injectors": { "defaultRequire": 1 },
   "mixinextras": {"minVersion": "0.5.0"}

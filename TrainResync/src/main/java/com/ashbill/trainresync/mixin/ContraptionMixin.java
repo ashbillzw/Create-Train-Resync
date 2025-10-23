@@ -14,14 +14,13 @@ import com.simibubi.create.content.contraptions.actors.seat.SeatBlock;
 
 import com.ashbill.trainresync.tags.TRTags;
 
-@Mixin(Contraption.class)
+@Mixin(value = Contraption.class, remap = false)
 public abstract class ContraptionMixin {
     @Definition(id = "SeatBlock", type = SeatBlock.class)
     @Expression("? instanceof SeatBlock")
     @ModifyExpressionValue(
         method = "moveBlock",
-        at = @At("MIXINEXTRAS:EXPRESSION"),
-        remap = false
+        at = @At("MIXINEXTRAS:EXPRESSION")
     )
     private boolean trainresync$seatOrFakeSeat(boolean original, @Local BlockState state) {
         return original || state.is(TRTags.FAKE_SEATS);
