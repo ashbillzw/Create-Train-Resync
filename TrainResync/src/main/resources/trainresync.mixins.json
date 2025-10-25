@@ -7,8 +7,8 @@
   "plugin": "com.llamalad7.mixinextras.MixinExtrasPlugin",
   "mixins": [
     "ContraptionMixin",
-    "TrainMixin",
     "CarriageMixin",
+    "TrainMixin",
     "accessor.PantographBlockEntityAccessor"
   ],
   "injectors": { "defaultRequire": 1 },
