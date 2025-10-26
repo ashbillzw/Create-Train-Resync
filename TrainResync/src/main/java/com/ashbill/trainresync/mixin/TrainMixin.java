@@ -1,6 +1,8 @@
 package com.ashbill.trainresync.mixin;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -8,18 +10,23 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
 
 import com.simibubi.create.content.trains.entity.Carriage;
 import com.simibubi.create.content.trains.entity.Train;
 import com.simibubi.create.content.trains.entity.TrainStatus;
+import com.simibubi.create.content.trains.graph.TrackGraph;
+import com.simibubi.create.content.trains.graph.DimensionPalette;
 
 import com.ashbill.trainresync.mixin_interfaces.IElectricTrainCarriage;
+import com.ashbill.trainresync.mixin_interfaces.IElectricTrain;
 
 
 @Mixin(value = Train.class, remap = false)
-public abstract class TrainMixin {
+public abstract class TrainMixin implements IElectricTrain {
 
     @Shadow public int fuelTicks;
 
@@ -28,6 +35,11 @@ public abstract class TrainMixin {
     @Unique private boolean trainresync$isFirstTick = true;
 
     @Shadow	public List<Carriage> carriages;
+
+    @Inject(method = "read", at = @At("RETURN"))
+    private static void trainresync$skipFirstTickInformationOnLoad(CompoundTag tag, Map<UUID, TrackGraph> trackNetworks, DimensionPalette dimensions, CallbackInfoReturnable<Train> cir) {
+        ((IElectricTrain)cir.getReturnValue()).trainresync$skipFirstTickInformation();
+    }
 
     @Inject(method = "earlyTick", at = @At("HEAD"))
     private void trainresync$electricityIsFuel(Level level, CallbackInfo ci) {
@@ -48,5 +60,10 @@ public abstract class TrainMixin {
         for (Carriage carriage : carriages)
             if (((IElectricTrainCarriage)carriage).trainresync$hasElectricity(level)) return true;
         return false;
+    }
+
+    @Override
+    public void trainresync$skipFirstTickInformation() {
+        trainresync$isFirstTick = false;
     }
 }

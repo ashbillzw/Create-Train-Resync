@@ -55,7 +55,7 @@ public abstract class CarriageMixin implements IElectricTrainCarriage {
         trainresync$setPantographs(((IElectricTrainContraption)contraption).trainresync$getPantographs());
     }
 
-    @Inject(method = "write", at = @At("RETURN"), require = 1)
+    @Inject(method = "write", at = @At("RETURN"))
     private void trainresync$savePantographs(DimensionPalette dimensions, CallbackInfoReturnable<CompoundTag> cir) {
         CompoundTag tag = cir.getReturnValue();
         Vector3f euler = new Vector3f();
@@ -64,7 +64,7 @@ public abstract class CarriageMixin implements IElectricTrainCarriage {
         tag.put("Trainresync$Pantographs", NBTHelper.writeCompoundList(trainresync$pantographs, NbtUtils::writeBlockPos));
     }
 
-    @Inject(method = "read", at = @At("RETURN"), require = 1)
+    @Inject(method = "read", at = @At("RETURN"))
     private static void trainresync$loadPantographs(CompoundTag tag, TrackGraph graph, DimensionPalette dimensions, CallbackInfoReturnable<Carriage> cir) {
         Carriage carriage = cir.getReturnValue();
         ((IElectricTrainCarriage)carriage).trainresync$setInitialRotation(new Quaternionf().rotationYXZ(tag.getFloat("Trainresync$InitialRotation"), 0.0F, 0.0F));
