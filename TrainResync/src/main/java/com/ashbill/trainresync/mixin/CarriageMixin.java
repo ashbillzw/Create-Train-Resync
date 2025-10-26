@@ -1,13 +1,11 @@
 package com.ashbill.trainresync.mixin;
 
-import java.util.List;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
-import java.util.function.Consumer;
+import java.util.HashSet;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
+import org.joml.Vector3d;
+import org.joml.Quaternionf;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -16,56 +14,30 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate.StructureBlockInfo;
-
-import com.simibubi.create.content.trains.entity.Carriage;
-import com.simibubi.create.content.trains.entity.CarriageContraption;
-import com.simibubi.create.content.trains.entity.CarriageContraptionEntity;
-
-import de.mrjulsen.paw.block.PantographBlock;
-
-
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.server.ServerLifecycleHooks;
-
-import com.ashbill.trainresync.mixin.accessor.PantographBlockEntityAccessor;
-import com.ashbill.trainresync.mixin_interfaces.IElectricTrainCarriage;
-import com.ashbill.trainresync.mixin_interfaces.IElectricTrainContraption;
-
-import de.mrjulsen.wires.WireCollision.WireBlockCollision;
-import de.mrjulsen.paw.blockentity.PantographBlockEntity;
-import de.mrjulsen.wires.graph.WireGraph;
-import de.mrjulsen.wires.graph.WireGraphManager;
-import de.mrjulsen.wires.WiresApi;
-
-
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
-import org.joml.Vector3fc;
-import org.joml.Vector3d;
-import org.joml.Vector3dc;
-import net.minecraft.world.phys.Vec3;
-
-
-import com.simibubi.create.content.trains.entity.Train;
-import com.simibubi.create.content.trains.entity.Carriage;
-import com.simibubi.create.content.trains.entity.Carriage.DimensionalCarriageEntity;
-
-
 import com.llamalad7.mixinextras.sugar.Local;
 
-import com.ashbill.trainresync.DebugPrint;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 import com.simibubi.create.foundation.utility.NBTHelper;
-import net.minecraft.nbt.NbtUtils;
-import net.minecraft.nbt.Tag;
-import com.simibubi.create.content.trains.graph.DimensionPalette;
+import com.simibubi.create.content.trains.entity.CarriageContraption;
+import com.simibubi.create.content.trains.entity.Carriage;
+import com.simibubi.create.content.trains.entity.Carriage.DimensionalCarriageEntity;
 import com.simibubi.create.content.trains.graph.TrackGraph;
-import net.minecraft.nbt.CompoundTag;
+import com.simibubi.create.content.trains.graph.DimensionPalette;
+
+import de.mrjulsen.wires.WiresApi;
+import de.mrjulsen.wires.graph.WireGraph;
+import de.mrjulsen.wires.graph.WireGraphManager;
+import de.mrjulsen.paw.blockentity.PantographBlockEntity;
+
+import com.ashbill.trainresync.mixin.accessor.PantographBlockEntityAccessor;
+import com.ashbill.trainresync.mixin_interfaces.IElectricTrainContraption;
+import com.ashbill.trainresync.mixin_interfaces.IElectricTrainCarriage;
 
 
 @Mixin(value = Carriage.class, remap = false)
@@ -133,7 +105,7 @@ public abstract class CarriageMixin implements IElectricTrainCarriage {
             Quaternionf rotation = getCarriageRotation(dce);
             Vector3fc location = dce.positionAnchor.toVector3f().add(rotation.transform(trainresync$initialRotation.transformInverse​(Vec3.atLowerCornerOf(pantograph).toVector3f())));
 
-            DebugPrint.debugPrint("[TR] PANTO LOC: " + new Vector3f(location).toString(new DecimalFormat("0.000")));
+            // DebugPrint.debugPrint("[TR] PANTO LOC: " + new Vector3f(location).toString(new DecimalFormat("0.000")));
 
             WireGraph wiregraph = WireGraphManager.get(level, WiresApi.PAW_CATENARY_WIRES);
 

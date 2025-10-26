@@ -4,16 +4,15 @@ import java.util.Set;
 import java.util.HashSet;
 
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.expression.Definition;
 import com.llamalad7.mixinextras.expression.Expression;
-import com.llamalad7.mixinextras.sugar.Local;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
@@ -25,10 +24,6 @@ import de.mrjulsen.paw.block.PantographBlock;
 
 import com.ashbill.trainresync.tags.TRTags;
 import com.ashbill.trainresync.mixin_interfaces.IElectricTrainContraption;
-
-
-import net.minecraftforge.server.ServerLifecycleHooks;
-import net.minecraft.core.Direction;
 
 
 @Mixin(value = Contraption.class, remap = false)
