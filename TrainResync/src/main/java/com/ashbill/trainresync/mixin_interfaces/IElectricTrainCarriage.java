@@ -1,7 +1,6 @@
 package com.ashbill.trainresync.mixin_interfaces;
 
 import java.util.Set;
-
 import org.joml.Quaternionf;
 
 import net.minecraft.world.level.Level;
