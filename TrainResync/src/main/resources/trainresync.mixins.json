@@ -9,6 +9,7 @@
     "ContraptionMixin",
     "CarriageMixin",
     "TrainMixin",
+    "PantographBlockEntityMixin",
     "accessor.PantographBlockEntityAccessor"
   ],
   "injectors": { "defaultRequire": 1 },
