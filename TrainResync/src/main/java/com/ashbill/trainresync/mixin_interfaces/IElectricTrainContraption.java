@@ -5,6 +5,6 @@ import java.util.Set;
 import net.minecraft.core.BlockPos;
 
 
-public interface IElectricTrain {
+public interface IElectricTrainContraption {
     public Set<BlockPos> trainresync$getPantographs();
 }

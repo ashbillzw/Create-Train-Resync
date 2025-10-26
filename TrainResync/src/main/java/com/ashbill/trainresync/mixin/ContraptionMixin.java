@@ -24,7 +24,7 @@ import com.simibubi.create.content.contraptions.actors.seat.SeatBlock;
 import de.mrjulsen.paw.block.PantographBlock;
 
 import com.ashbill.trainresync.tags.TRTags;
-import com.ashbill.trainresync.mixin_interfaces.IElectricTrain;
+import com.ashbill.trainresync.mixin_interfaces.IElectricTrainContraption;
 
 
 import net.minecraftforge.server.ServerLifecycleHooks;
@@ -32,7 +32,7 @@ import net.minecraft.core.Direction;
 
 
 @Mixin(value = Contraption.class, remap = false)
-public abstract class ContraptionMixin implements IElectricTrain {
+public abstract class ContraptionMixin implements IElectricTrainContraption {
 
     @Shadow public BlockPos anchor;
 
@@ -47,19 +47,8 @@ public abstract class ContraptionMixin implements IElectricTrain {
         )
     )
     private void trainresync$findPantographs(CallbackInfoReturnable<Boolean> ci, @Local BlockState state, @Local BlockPos pos) {
-        if (state.getBlock() instanceof PantographBlock) {
+        if (state.getBlock() instanceof PantographBlock)
             trainresync$pantographs.add(pos.subtract(anchor));
-
-            var server = ServerLifecycleHooks.getCurrentServer();
-            if (server != null) {
-                var msg = net.minecraft.network.chat.Component.literal("[TR] DETECTED PANTO: " + pos.subtract(anchor).toString());
-                for (var p : server.getPlayerList().getPlayers())
-                    p.sendSystemMessage(msg);
-                // var msg2 = net.minecraft.network.chat.Component.literal("[TR] DIRECTION: " + forcedDirection.toString());
-                // for (var p : server.getPlayerList().getPlayers())
-                //     p.sendSystemMessage(msg2);                
-            }
-        }
     }
 
     @Definition(id = "SeatBlock", type = SeatBlock.class)

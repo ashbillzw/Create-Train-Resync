@@ -1,9 +1,11 @@
 package com.ashbill.trainresync.mixin;
 
 import java.util.List;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -13,6 +15,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -29,29 +32,118 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.server.ServerLifecycleHooks;
 
-import com.ashbill.trainresync.mixin_interfaces.IElectricTrain;
+import com.ashbill.trainresync.mixin.accessor.PantographBlockEntityAccessor;
+import com.ashbill.trainresync.mixin_interfaces.IElectricTrainCarriage;
+import com.ashbill.trainresync.mixin_interfaces.IElectricTrainContraption;
+
+import de.mrjulsen.wires.WireCollision.WireBlockCollision;
+import de.mrjulsen.paw.blockentity.PantographBlockEntity;
+import de.mrjulsen.wires.graph.WireGraph;
+import de.mrjulsen.wires.graph.WireGraphManager;
+import de.mrjulsen.wires.WiresApi;
+
+
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
+import net.minecraft.world.phys.Vec3;
+
+
+import com.simibubi.create.content.trains.entity.Train;
+import com.simibubi.create.content.trains.entity.Carriage;
+import com.simibubi.create.content.trains.entity.Carriage.DimensionalCarriageEntity;
+
+
+import com.llamalad7.mixinextras.sugar.Local;
+
+import com.ashbill.trainresync.DebugPrint;
+
+import com.simibubi.create.foundation.utility.NBTHelper;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.Tag;
+import com.simibubi.create.content.trains.graph.DimensionPalette;
+import com.simibubi.create.content.trains.graph.TrackGraph;
+import net.minecraft.nbt.CompoundTag;
+
 
 @Mixin(value = Carriage.class, remap = false)
-public abstract class CarriageMixin implements IElectricTrain {
+public abstract class CarriageMixin implements IElectricTrainCarriage {
     
-    @Unique private Set<BlockPos> trainresync$pantographs = null;
+    @Unique private final Quaternionf trainresync$initialRotation = new Quaternionf();
 
-    @Inject(method = "setContraption", at = @At("HEAD"))
-    private void trainresync$findPantographs(Level level, CarriageContraption contraption, CallbackInfo ci) {
-        trainresync$pantographs = ((IElectricTrain)contraption).trainresync$getPantographs();
+    @Unique private final Set<BlockPos> trainresync$pantographs = new HashSet<BlockPos>();
+
+    @Shadow public abstract DimensionalCarriageEntity getDimensional(Level level);
+
+    @Inject(method = "setContraption", at = @At("RETURN"))
+    private void trainresync$findPantographs(Level level, CarriageContraption contraption, CallbackInfo ci, @Local DimensionalCarriageEntity dimensional) {
+        trainresync$setInitialRotation(getCarriageRotation(dimensional));
+        trainresync$setPantographs(((IElectricTrainContraption)contraption).trainresync$getPantographs());
+    }
+
+    @Inject(method = "write", at = @At("RETURN"), require = 1)
+    private void trainresync$savePantographs(DimensionPalette dimensions, CallbackInfoReturnable<CompoundTag> cir) {
+        CompoundTag tag = cir.getReturnValue();
+        Vector3f euler = new Vector3f();
+        trainresync$initialRotation.getEulerAnglesYXZ(euler);
+        tag.putFloat("Trainresync$InitialRotation", euler.y);
+        tag.put("Trainresync$Pantographs", NBTHelper.writeCompoundList(trainresync$pantographs, NbtUtils::writeBlockPos));
+    }
+
+    @Inject(method = "read", at = @At("RETURN"), require = 1)
+    private static void trainresync$loadPantographs(CompoundTag tag, TrackGraph graph, DimensionPalette dimensions, CallbackInfoReturnable<Carriage> cir) {
+        Carriage carriage = cir.getReturnValue();
+        ((IElectricTrainCarriage)carriage).trainresync$setInitialRotation(new Quaternionf().rotationYXZ(tag.getFloat("Trainresync$InitialRotation"), 0.0F, 0.0F));
+        Set <BlockPos> pantographs = new HashSet<BlockPos>();
+        NBTHelper.iterateCompoundList(tag.getList("Trainresync$Pantographs", Tag.TAG_COMPOUND), (c ->
+            pantographs.add(NbtUtils.readBlockPos(c))
+        ));
+        ((IElectricTrainCarriage)carriage).trainresync$setPantographs(pantographs);
+    }
+
+    @Unique private static Quaternionf getCarriageRotation(DimensionalCarriageEntity dce) {
+        Quaternionf rotation = new Quaternionf().rotationTo(new Vector3f(0, 0, 1), dce.rotationAnchors.get(false).subtract(dce.rotationAnchors.get(true)).toVector3f());
+
+        Vector3f euler = new Vector3f();
+        rotation.getEulerAnglesYXZ(euler);
+        rotation.rotationYXZ​(euler.y, euler.x, 0.0F);
+
+        return rotation;
     }
 
     @Override
-    public Set<BlockPos> trainresync$getPantographs() {
+    public void trainresync$setInitialRotation(Quaternionf initialRotation) {
+        trainresync$initialRotation.set(initialRotation);
+    }
 
-        // var server = ServerLifecycleHooks.getCurrentServer();
-        // if (server != null) {
-        //     var msg = net.minecraft.network.chat.Component.literal("[TR] GET PANTO CALLED: " + trainresync$pantographs.size());
-        //     for (var p : server.getPlayerList().getPlayers())
-        //         p.sendSystemMessage(msg);
-        // }
+    @Override
+    public void trainresync$setPantographs(Set<BlockPos> pantographs) {
+        trainresync$pantographs.clear();
+        trainresync$pantographs.addAll(pantographs);
+    }
 
-        assert trainresync$pantographs != null;
-        return trainresync$pantographs;
+    @Override
+    public boolean trainresync$hasElectricity(Level level) {
+        DimensionalCarriageEntity dce = getDimensional(level);
+
+        for (BlockPos pantograph : trainresync$pantographs) {
+
+            Quaternionf rotation = getCarriageRotation(dce);
+            Vector3fc location = dce.positionAnchor.toVector3f().add(rotation.transform(trainresync$initialRotation.transformInverse​(Vec3.atLowerCornerOf(pantograph).toVector3f())));
+
+            DebugPrint.debugPrint("[TR] PANTO LOC: " + new Vector3f(location).toString(new DecimalFormat("0.000")));
+
+            WireGraph wiregraph = WireGraphManager.get(level, WiresApi.PAW_CATENARY_WIRES);
+
+            Vector3fc rightVector = rotation.transform(new Vector3f().set(PantographBlockEntity.BASE_RIGHT_VECTOR));
+            for (BlockPos pos : PantographBlockEntityAccessor.trainresync$callFindIntersectingBlocks(
+                new Vector3d(location).sub(rightVector),
+                new Vector3d(location).add(rightVector),
+                rotation.transform(new Vector3d(PantographBlockEntity.BASE_UP_VECTOR))
+            )) if (!wiregraph.getCollisionsInBlock(pos).isEmpty()) return true;
+        }
+        return false;
     }
 }
