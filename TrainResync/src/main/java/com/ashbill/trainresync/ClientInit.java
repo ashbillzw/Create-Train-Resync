@@ -136,7 +136,7 @@ public class ClientInit {
                 }
             }
 
-            showMessage("[AshBill TrainResync] 已刷新列车状态", 6000);
+            showMessage("[AshBill TrainResync] 已刷新列车状态", 18000);
             return 0;
 
         } catch (Exception t) {
@@ -175,7 +175,7 @@ public class ClientInit {
 
         if (messageCooldown == -2 && cooldown != -1) return;
 
-        if (messageCooldown < 12000 || cooldown == -1) {
+        if (messageCooldown < 36000 || cooldown == -1) {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player != null) mc.player.sendSystemMessage(Component.literal(msg));
             if (messageCooldown != -3 && cooldown != -1) messageCooldown += cooldown;
