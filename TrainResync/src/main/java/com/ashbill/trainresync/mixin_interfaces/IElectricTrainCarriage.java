@@ -11,4 +11,5 @@ public interface IElectricTrainCarriage {
     public boolean trainresync$hasElectricity(Level level);
     public void trainresync$setInitialRotation(Quaternionf initialRotation);
     public void trainresync$setPantographs(Set<BlockPos> pantographs);
+    public int trainresync$getPantographCount();
 }

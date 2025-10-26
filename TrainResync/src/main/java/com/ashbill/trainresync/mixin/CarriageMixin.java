@@ -97,6 +97,11 @@ public abstract class CarriageMixin implements IElectricTrainCarriage {
     }
 
     @Override
+    public int trainresync$getPantographCount() {
+        return trainresync$pantographs.size();
+    }
+
+    @Override
     public boolean trainresync$hasElectricity(Level level) {
         DimensionalCarriageEntity dce = getDimensional(level);
 
