@@ -19,8 +19,22 @@ side="BOTH"
 [[dependencies.trainresync]]
 modId="minecraft"
 mandatory=true
-versionRange="[1.20.1,1.21)"
+versionRange="[1.20.1,)"
 ordering="NONE"
+side="BOTH"
+
+[[dependencies.trainresync]]
+modId="create"
+mandatory=true
+versionRange="[0.5.1.j,)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.trainresync]]
+modId="pantographsandwires"
+mandatory=true
+versionRange="[0.1.1,)"
+ordering="AFTER"
 side="BOTH"
 
 [[mixins]]
