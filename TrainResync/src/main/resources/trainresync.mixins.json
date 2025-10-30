@@ -10,6 +10,7 @@
     "CarriageMixin",
     "TrainMixin",
     "PantographBlockEntityMixin",
+    "LiquidEngineUpgradeMixin",
     "accessor.PantographBlockEntityAccessor"
   ],
   "injectors": { "defaultRequire": 1 },
