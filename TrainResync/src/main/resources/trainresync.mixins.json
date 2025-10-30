@@ -4,7 +4,7 @@
   "package": "com.ashbill.trainresync.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "trainresync.refmap.json",
-  "plugin": "com.llamalad7.mixinextras.MixinExtrasPlugin",
+  "plugin": "com.ashbill.trainresync.mixin.TrainResyncMixinPlugin",
   "mixins": [
     "ContraptionMixin",
     "CarriageMixin",
