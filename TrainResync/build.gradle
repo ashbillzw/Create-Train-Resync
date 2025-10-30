@@ -31,6 +31,7 @@ dependencies {
 
     implementation files("libs/create-0.5.1.j.jar")
     implementation files("libs/pantographsandwires-forge-1.20.1-beta-0.1.1.jar")
+    implementation files("libs/simpleplanes-1.20.1-5.3.3.jar")
 
     annotationProcessor "org.spongepowered:mixin:0.8.5:processor"
 

@@ -37,6 +37,13 @@ versionRange="[0.1.1,)"
 ordering="AFTER"
 side="BOTH"
 
+[[dependencies.trainresync]]
+modId="simpleplanes"
+mandatory=false
+versionRange="[1.20.1-5.3.3,)"
+ordering="AFTER"
+side="BOTH"
+
 [[mixins]]
 modId="trainresync"
 config="trainresync.mixins.json"
