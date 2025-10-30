@@ -10,24 +10,19 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import com.llamalad7.mixinextras.sugar.Local;
-import com.llamalad7.mixinextras.expression.Definition;
-import com.llamalad7.mixinextras.expression.Expression;
-import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 
 import com.simibubi.create.content.contraptions.Contraption;
-import com.simibubi.create.content.contraptions.actors.seat.SeatBlock;
 
 import de.mrjulsen.paw.block.PantographBlock;
 
-import com.ashbill.trainresync.tags.TRTags;
 import com.ashbill.trainresync.mixin_interfaces.IElectricTrainContraption;
 
 
 @Mixin(value = Contraption.class, remap = false)
-public abstract class ContraptionMixin implements IElectricTrainContraption {
+public abstract class ContraptionPantographMixin implements IElectricTrainContraption {
 
     @Shadow public BlockPos anchor;
 
@@ -44,16 +39,6 @@ public abstract class ContraptionMixin implements IElectricTrainContraption {
     private void trainresync$findPantographs(CallbackInfoReturnable<Boolean> ci, @Local BlockState state, @Local BlockPos pos) {
         if (state.getBlock() instanceof PantographBlock)
             trainresync$pantographs.add(pos.subtract(anchor));
-    }
-
-    @Definition(id = "SeatBlock", type = SeatBlock.class)
-    @Expression("? instanceof SeatBlock")
-    @ModifyExpressionValue(
-        method = "moveBlock",
-        at = @At("MIXINEXTRAS:EXPRESSION")
-    )
-    private boolean trainresync$seatOrFakeSeat(boolean original, @Local BlockState state) {
-        return original || state.is(TRTags.FAKE_SEATS);
     }
 
     @Override

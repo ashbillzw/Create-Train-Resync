@@ -25,6 +25,7 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         LoadingModList lm = LoadingModList.get();
+        if (mixinClassName.contains("ContraptionSeatMixin")) return true;
         if (mixinClassName.contains("LiquidEngineUpgradeMixin"))
             return lm.getModFileById("simpleplanes") != null && lm.getModFileById("supplementaries") != null;
         return lm.getModFileById("pantographsandwires") != null;
