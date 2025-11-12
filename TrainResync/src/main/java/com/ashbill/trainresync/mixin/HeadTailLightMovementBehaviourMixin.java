@@ -16,7 +16,7 @@ public abstract class HeadTailLightMovementBehaviourMixin {
         method = "tick",
         at = @At(
             value = "INVOKE",
-            target = "Ljava/io/PrintStream;println(Ljava/lang/Object;)V",
+            target = "Ljava/io/PrintStream;println(Ljava/lang/Object;)V"
         )
     )
     private void trainresync$shutupPlease(PrintStream out, Object arg) {}
