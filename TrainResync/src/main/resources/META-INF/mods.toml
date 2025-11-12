@@ -44,6 +44,13 @@ versionRange="[1.20.1-5.3.3,)"
 ordering="AFTER"
 side="BOTH"
 
+[[dependencies.trainresync]]
+modId="ctl"
+mandatory=false
+versionRange="[1.0.0,)"
+ordering="AFTER"
+side="BOTH"
+
 [[mixins]]
 modId="trainresync"
 config="trainresync.mixins.json"

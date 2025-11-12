@@ -12,6 +12,7 @@
         "TrainMixin",
         "PantographBlockEntityMixin",
         "LiquidEngineUpgradeMixin",
+        "HeadTailLightMovementBehaviourMixin",
         "accessor.PantographBlockEntityAccessor"
     ],
     "injectors": { "defaultRequire": 1 },

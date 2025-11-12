@@ -28,6 +28,8 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.contains("ContraptionSeatMixin")) return true;
         if (mixinClassName.contains("LiquidEngineUpgradeMixin"))
             return lm.getModFileById("simpleplanes") != null && lm.getModFileById("supplementaries") != null;
+        if (mixinClassName.contains("HeadTailLightMovementBehaviourMixin"))
+            return lm.getModFileById("ctl") != null;
         return lm.getModFileById("pantographsandwires") != null;
     }
 }
