@@ -6,7 +6,7 @@ plugins {
     id 'org.spongepowered.mixin' version '0.7.+'
 }
 
-version = '1.5.1.a'
+version = '1.6.0.a'
 group = 'com.ashbill'
 
 base {

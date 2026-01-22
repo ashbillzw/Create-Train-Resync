@@ -4,7 +4,7 @@ license="MIT"
 
 [[mods]]
 modId="trainresync"
-version="1.5.1.a"
+version="1.6.0.a"
 displayName="Train Resync"
 authors="ashbill"
 description='''Fix out-of-sync of Create trains.'''
