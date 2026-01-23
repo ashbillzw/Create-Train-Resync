@@ -10,6 +10,7 @@
         "ContraptionPantographMixin",
         "CarriageMixin",
         "TrainMixin",
+        "TrainStatusMixin",
         "PantographBlockEntityMixin",
         "LiquidEngineUpgradeMixin",
         "HeadTailLightMovementBehaviourMixin",
