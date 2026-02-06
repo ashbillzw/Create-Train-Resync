@@ -13,7 +13,6 @@
         "TrainStatusMixin",
         "PantographBlockEntityMixin",
         "LiquidEngineUpgradeMixin",
-        "HeadTailLightMovementBehaviourMixin",
         "accessor.PantographBlockEntityAccessor",
         "EntityMixin"
     ],
