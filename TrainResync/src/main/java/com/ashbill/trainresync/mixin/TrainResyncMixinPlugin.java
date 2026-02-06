@@ -25,11 +25,25 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         LoadingModList lm = LoadingModList.get();
-        if (mixinClassName.contains("ContraptionSeatMixin")) return true;
-        if (mixinClassName.contains("LiquidEngineUpgradeMixin"))
-            return lm.getModFileById("simpleplanes") != null && lm.getModFileById("supplementaries") != null;
+
+        if (mixinClassName.contains("CarriageMixin"))
+            return lm.getModFileById("pantographsandwires") != null;
+        if (mixinClassName.contains("ContraptionPantographMixin"))
+            return lm.getModFileById("pantographsandwires") != null;
+        if (mixinClassName.contains("ContraptionSeatMixin"))
+            return lm.getModFileById("create") != null;
+        if (mixinClassName.contains("EntityMixin"))
+            return true;
         if (mixinClassName.contains("HeadTailLightMovementBehaviourMixin"))
             return lm.getModFileById("ctl") != null;
-        return lm.getModFileById("pantographsandwires") != null;
+        if (mixinClassName.contains("LiquidEngineUpgradeMixin"))
+            return lm.getModFileById("simpleplanes") != null && lm.getModFileById("supplementaries") != null;
+        if (mixinClassName.contains("PantographBlockEntityMixin"))
+            return lm.getModFileById("pantographsandwires") != null;
+        if (mixinClassName.contains("TrainMixin"))
+            return lm.getModFileById("pantographsandwires") != null;
+        if (mixinClassName.contains("TrainStatusMixin"))
+            return lm.getModFileById("create") != null;
+        return true;
     }
 }
