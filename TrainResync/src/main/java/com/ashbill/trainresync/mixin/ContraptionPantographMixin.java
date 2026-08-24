@@ -36,7 +36,7 @@ public abstract class ContraptionPantographMixin implements IElectricTrainContra
             remap = true
         )
     )
-    private void trainresync$findPantographs(CallbackInfoReturnable<Boolean> ci, @Local BlockState state, @Local BlockPos pos) {
+    private void trainresync$findPantographs(CallbackInfoReturnable<Boolean> cir, @Local BlockState state, @Local BlockPos pos) {
         if (state.getBlock() instanceof PantographBlock)
             trainresync$pantographs.add(pos.subtract(anchor));
     }

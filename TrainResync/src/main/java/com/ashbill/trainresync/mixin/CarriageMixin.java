@@ -51,7 +51,7 @@ public abstract class CarriageMixin implements IElectricTrainCarriage {
 
     @Inject(method = "setContraption", at = @At("RETURN"))
     private void trainresync$findPantographs(Level level, CarriageContraption contraption, CallbackInfo ci, @Local DimensionalCarriageEntity dimensional) {
-        trainresync$setInitialRotation(getCarriageRotation(dimensional));
+        trainresync$setInitialRotation(trainresync$getCarriageRotation(dimensional));
         trainresync$setPantographs(((IElectricTrainContraption)contraption).trainresync$getPantographs());
     }
 
@@ -75,7 +75,7 @@ public abstract class CarriageMixin implements IElectricTrainCarriage {
         ((IElectricTrainCarriage)carriage).trainresync$setPantographs(pantographs);
     }
 
-    @Unique private static Quaternionf getCarriageRotation(DimensionalCarriageEntity dce) {
+    @Unique private static Quaternionf trainresync$getCarriageRotation(DimensionalCarriageEntity dce) {
         Quaternionf rotation = new Quaternionf().rotationTo(new Vector3f(0, 0, 1), dce.rotationAnchors.get(false).subtract(dce.rotationAnchors.get(true)).toVector3f());
 
         Vector3f euler = new Vector3f();
@@ -107,7 +107,7 @@ public abstract class CarriageMixin implements IElectricTrainCarriage {
 
         for (BlockPos pantograph : trainresync$pantographs) {
 
-            Quaternionf rotation = getCarriageRotation(dce);
+            Quaternionf rotation = trainresync$getCarriageRotation(dce);
             Vector3fc location = dce.positionAnchor.toVector3f().add(rotation.transform(trainresync$initialRotation.transformInverse​(Vec3.atLowerCornerOf(pantograph).toVector3f())));
 
             // DebugPrint.debugPrint("[TR] PANTO LOC: " + new Vector3f(location).toString(new DecimalFormat("0.000")));
