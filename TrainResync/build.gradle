@@ -20,6 +20,10 @@ minecraft {
 }
 
 repositories {
+    flatDir {
+        dir 'libs'
+    }
+
     maven { url = "https://maven.tterrag.com/" }               // Create deps (ok if unused)
     maven { url = "https://maven.ladysnake.org/releases" }     // MixinExtras
     maven { url = "https://repo.spongepowered.org/maven" }     // Sponge Mixin + plugin processor
@@ -29,10 +33,11 @@ repositories {
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.2.0'
 
-    implementation files("libs/create-1.20.1-0.5.1.j.jar")
-    implementation files("libs/pantographsandwires-forge-1.20.1-beta-0.1.1.jar")
-    implementation files("libs/simpleplanes-1.20.1-5.3.3.jar")
-    implementation files("libs/ctl-forge-1.0.0.jar")
+    implementation fg.deobf("local:create:1.20.1-0.5.1.j")
+    implementation fg.deobf("local:pantographsandwires-forge:1.20.1-beta-0.1.1")
+    implementation fg.deobf("local:simpleplanes:1.20.1-5.3.3")
+    implementation fg.deobf("local:ctl-forge:1.0.0")
+    implementation fg.deobf("local:touhoulittlemaid:1.4.0-forge+mc1.20.1")
 
     annotationProcessor "org.spongepowered:mixin:0.8.5:processor"
 
