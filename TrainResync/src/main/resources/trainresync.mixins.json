@@ -6,16 +6,19 @@
     "refmap": "trainresync.refmap.json",
     "plugin": "com.ashbill.trainresync.mixin.TrainResyncMixinPlugin",
     "mixins": [
-        "ContraptionSeatMixin",
-        "ContraptionPantographMixin",
-        "CarriageMixin",
-        "TrainMixin",
-        "TrainStatusMixin",
-        "PantographBlockEntityMixin",
-        "LiquidEngineUpgradeMixin",
-        "HeadTailLightMovementBehaviourMixin",
         "accessor.PantographBlockEntityAccessor",
-        "EntityMixin"
+        "AbstractMaidContainerMixin",
+        "CarriageMixin",
+        "ContraptionPantographMixin",
+        "ContraptionSeatMixin",
+        "EntityMaidMixin",
+        "EntityMixin",
+        "HeadTailLightMovementBehaviourMixin",
+        "LiquidEngineUpgradeMixin",
+        "OpenMaidGuiMessageMixin",
+        "PantographBlockEntityMixin",
+        "TrainMixin",
+        "TrainStatusMixin"
     ],
     "injectors": { "defaultRequire": 1 },
     "mixinextras": {"minVersion": "0.5.0"}

@@ -51,6 +51,13 @@ versionRange="[1.0.0,)"
 ordering="AFTER"
 side="BOTH"
 
+[[dependencies.trainresync]]
+modId="touhou_little_maid"
+mandatory=false
+versionRange="[1.4.0,)"
+ordering="AFTER"
+side="BOTH"
+
 [[mixins]]
 modId="trainresync"
 config="trainresync.mixins.json"
