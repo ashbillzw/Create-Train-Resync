@@ -16,15 +16,26 @@ import com.ashbill.trainresync.AdminIsOwner;
 public abstract class HandleBackpackEventMixin {
     
     @ModifyExpressionValue(
+        method = "/^lambda\\$onInteractMaid\\$\\d+$/", // lambda$onInteractMaid$<int>
+        at = @At(
+            value = "INVOKE",
+            target = "Lcom/github/tartaricacid/touhoulittlemaid/entity/passive/EntityMaid;isOwnedBy(Lnet/minecraft/world/entity/LivingEntity;)Z",
+            remap = true
+        )
+    )
+    private static boolean trainresync$allowAdminInstallMaidBackpack(boolean original, @Local Player playerIn) {
+        return AdminIsOwner.trainresync$adminIsOwner(original, playerIn);
+    }
+
+    @ModifyExpressionValue(
         method = "onInteractMaid",
         at = @At(
             value = "INVOKE",
             target = "Lcom/github/tartaricacid/touhoulittlemaid/entity/passive/EntityMaid;isOwnedBy(Lnet/minecraft/world/entity/LivingEntity;)Z",
             remap = true
-        ),
-        expect = 2
+        )
     )
-    private static boolean trainresync$allowAdminInstallMaidBackpack(boolean original, @Local Player playerIn) {
+    private static boolean trainresync$allowAdminRemoveMaidBackpack(boolean original, @Local Player playerIn) {
         return AdminIsOwner.trainresync$adminIsOwner(original, playerIn);
     }
 }
