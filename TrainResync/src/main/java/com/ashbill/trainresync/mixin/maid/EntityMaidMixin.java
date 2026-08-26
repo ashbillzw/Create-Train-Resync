@@ -39,8 +39,7 @@ public abstract class EntityMaidMixin {
             value = "INVOKE",
             target = "Lcom/github/tartaricacid/touhoulittlemaid/entity/passive/EntityMaid;isOwnedBy(Lnet/minecraft/world/entity/LivingEntity;)Z"
         ),
-        remap = true,
-        expect = 1
+        remap = true
     )
     public boolean trainresync$allowAdminLeashMaid(boolean original, @Local Player playerIn) {
         return AdminIsOwner.trainresync$adminIsOwner(original, playerIn);

@@ -21,8 +21,7 @@ public abstract class SetAttackListMessageMixin {
             value = "INVOKE",
             target = "Lcom/github/tartaricacid/touhoulittlemaid/entity/passive/EntityMaid;isOwnedBy(Lnet/minecraft/world/entity/LivingEntity;)Z",
             remap = true
-        ),
-        expect = 1
+        )
     )
     private static boolean trainresync$allowAdminCommandMaidAttack(boolean original, @Local ServerPlayer sender) {
         return AdminIsOwner.trainresync$adminIsOwner(original, sender);
