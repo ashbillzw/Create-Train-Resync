@@ -9,8 +9,6 @@ import net.minecraft.world.entity.player.Player;
 
 import com.github.tartaricacid.touhoulittlemaid.inventory.container.AbstractMaidContainer;
 
-import com.ashbill.trainresync.mixin.maid.EntityMaidMixin;
-
 
 @Mixin(value = AbstractMaidContainer.class, remap = false)
 public abstract class AbstractMaidContainerMixin {
@@ -24,6 +22,6 @@ public abstract class AbstractMaidContainerMixin {
         remap = true
     )
     private boolean trainresync$allowAdminAccessMaidContainer(boolean original, @Local Player playerIn) {
-        return EntityMaidMixin.trainresync$adminIsOwner(original, playerIn);
+        return AdminIsOwner.trainresync$adminIsOwner(original, playerIn);
     }
 }

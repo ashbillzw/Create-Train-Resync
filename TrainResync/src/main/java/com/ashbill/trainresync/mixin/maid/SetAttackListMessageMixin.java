@@ -2,14 +2,12 @@ package com.ashbill.trainresync.mixin.maid;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+
+import com.github.tartaricacid.touhoulittlemaid.network.message.SetAttackListMessage;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
 
-import net.minecraft.world.entity.player.Player;
-
-import com.github.tartaricacid.touhoulittlemaid.network.message.SetAttackListMessage;
-
-import com.ashbill.trainresync.mixin.maid.EntityMaidMixin;
+import net.minecraft.server.level.ServerPlayer;
 
 
 @Mixin(value = SetAttackListMessage.class, remap = false)
@@ -24,7 +22,7 @@ public abstract class SetAttackListMessageMixin {
         ),
         expect = 1
     )
-    private static boolean trainresync$allowAdminCommandMaidAttack(boolean original, @Local Player playerIn) {
-        return EntityMaidMixin.trainresync$adminIsOwner(original, playerIn);
+    private static boolean trainresync$allowAdminCommandMaidAttack(boolean original, @Local ServerPlayer sender) {
+        return AdminIsOwner.trainresync$adminIsOwner(original, sender);
     }
 }

@@ -10,7 +10,7 @@
         "maid.AbstractMaidContainerMixin",
         "maid.EntityMaidMixin",
         "maid.HandleBackpackEventMixin",
-        "maid.MaidConfigMixin",
+        "maid.MaidMessageMixin",
         "maid.OpenMaidGuiMessageMixin",
         "maid.SetAttackListMessageMixin",
         "CarriageMixin",

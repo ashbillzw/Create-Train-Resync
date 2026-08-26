@@ -44,7 +44,7 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.contains("AbstractMaidContainerMixin") ||
             mixinClassName.contains("EntityMaidMixin") ||
             mixinClassName.contains("HandleBackpackEventMixin") ||
-            mixinClassName.contains("MaidConfigMixin") ||
+            mixinClassName.contains("MaidMessageMixin") ||
             mixinClassName.contains("OpenMaidGuiMessageMixin") ||
             mixinClassName.contains("SetAttackListMessageMixin")
         )

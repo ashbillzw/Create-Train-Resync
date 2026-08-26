@@ -9,8 +9,6 @@ import net.minecraft.world.entity.player.Player;
 
 import com.github.tartaricacid.touhoulittlemaid.network.message.OpenMaidGuiMessage;
 
-import com.ashbill.trainresync.mixin.maid.EntityMaidMixin;
-
 
 @Mixin(value = OpenMaidGuiMessage.class, remap = false)
 public abstract class OpenMaidGuiMessageMixin {
@@ -24,6 +22,6 @@ public abstract class OpenMaidGuiMessageMixin {
         )
     )
     private static boolean trainresync$allowAdminAccessMaidGui(boolean original, @Local Player playerIn) {
-        return EntityMaidMixin.trainresync$adminIsOwner(original, playerIn);
+        return AdminIsOwner.trainresync$adminIsOwner(original, playerIn);
     }
 }

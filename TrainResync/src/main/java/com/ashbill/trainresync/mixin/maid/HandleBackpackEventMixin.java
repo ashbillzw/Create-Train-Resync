@@ -9,8 +9,6 @@ import net.minecraft.world.entity.player.Player;
 
 import com.github.tartaricacid.touhoulittlemaid.event.maid.HandleBackpackEvent;
 
-import com.ashbill.trainresync.mixin.maid.EntityMaidMixin;
-
 
 @Mixin(value = HandleBackpackEvent.class, remap = false)
 public abstract class HandleBackpackEventMixin {
@@ -24,7 +22,7 @@ public abstract class HandleBackpackEventMixin {
         ),
         expect = 2
     )
-    private boolean trainresync$allowAdminInstallMaidBackpack(boolean original, @Local Player playerIn) {
-        return EntityMaidMixin.trainresync$adminIsOwner(original, playerIn);
+    private static boolean trainresync$allowAdminInstallMaidBackpack(boolean original, @Local Player playerIn) {
+        return AdminIsOwner.trainresync$adminIsOwner(original, playerIn);
     }
 }

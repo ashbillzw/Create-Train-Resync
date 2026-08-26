@@ -13,10 +13,6 @@ import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 
 @Mixin(value = EntityMaid.class, remap = false)
 public abstract class EntityMaidMixin {
-    
-    public static boolean trainresync$adminIsOwner(boolean original, Player playerIn) {
-        return original || playerIn.hasPermissions(2);
-    }
 
     @ModifyExpressionValue(
         method = "mobInteract",
@@ -45,6 +41,6 @@ public abstract class EntityMaidMixin {
         expect = 1
     )
     public boolean trainresync$allowAdminLeashMaid(boolean original, @Local Player playerIn) {
-        return trainresync$adminIsOwner(original, playerIn);
+        return AdminIsOwner.trainresync$adminIsOwner(original, playerIn);
     }
 }
