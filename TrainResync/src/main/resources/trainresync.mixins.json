@@ -7,15 +7,15 @@
     "plugin": "com.ashbill.trainresync.mixin.TrainResyncMixinPlugin",
     "mixins": [
         "accessor.PantographBlockEntityAccessor",
-        "AbstractMaidContainerMixin",
+        "maid.AbstractMaidContainerMixin",
+        "maid.EntityMaidMixin",
+        "maid.OpenMaidGuiMessageMixin",
         "CarriageMixin",
         "ContraptionPantographMixin",
         "ContraptionSeatMixin",
-        "EntityMaidMixin",
         "EntityMixin",
         "HeadTailLightMovementBehaviourMixin",
         "LiquidEngineUpgradeMixin",
-        "OpenMaidGuiMessageMixin",
         "PantographBlockEntityMixin",
         "TrainMixin",
         "TrainStatusMixin"

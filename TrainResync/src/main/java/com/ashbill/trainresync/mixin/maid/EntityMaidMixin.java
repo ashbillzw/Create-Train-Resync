@@ -1,4 +1,4 @@
-package com.ashbill.trainresync.mixin;
+package com.ashbill.trainresync.mixin.maid;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -12,7 +12,7 @@ import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 
 
 @Mixin(value = EntityMaid.class, remap = false)
-public abstract class EntityMaidMixin { 
+public abstract class EntityMaidMixin {
     
     @ModifyExpressionValue(
         method = "mobInteract",

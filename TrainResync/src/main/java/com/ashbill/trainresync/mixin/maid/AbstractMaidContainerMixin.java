@@ -1,4 +1,4 @@
-package com.ashbill.trainresync.mixin;
+package com.ashbill.trainresync.mixin.maid;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -11,7 +11,7 @@ import com.github.tartaricacid.touhoulittlemaid.inventory.container.AbstractMaid
 
 
 @Mixin(value = AbstractMaidContainer.class, remap = false)
-public abstract class AbstractMaidContainerMixin { 
+public abstract class AbstractMaidContainerMixin {
     
     @ModifyExpressionValue(
 

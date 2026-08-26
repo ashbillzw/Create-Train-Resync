@@ -26,8 +26,19 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         LoadingModList lm = LoadingModList.get();
 
+        if (mixinClassName.contains("PantographBlockEntityAccessor"))
+            return lm.getModFileById("pantographsandwires") != null;
+
+
         if (mixinClassName.contains("AbstractMaidContainerMixin"))
             return lm.getModFileById("touhou_little_maid") != null;
+
+        if (mixinClassName.contains("EntityMaidMixin"))
+            return lm.getModFileById("touhou_little_maid") != null;
+
+        if (mixinClassName.contains("OpenMaidGuiMessageMixin"))
+            return lm.getModFileById("touhou_little_maid") != null;
+
 
         if (mixinClassName.contains("CarriageMixin"))
             return lm.getModFileById("pantographsandwires") != null;
@@ -38,9 +49,6 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.contains("ContraptionSeatMixin"))
             return lm.getModFileById("create") != null;
 
-        if (mixinClassName.contains("EntityMaidMixin"))
-            return lm.getModFileById("touhou_little_maid") != null;
-
         if (mixinClassName.contains("EntityMixin"))
             return true;
 
@@ -49,9 +57,6 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
 
         if (mixinClassName.contains("LiquidEngineUpgradeMixin"))
             return lm.getModFileById("simpleplanes") != null && lm.getModFileById("supplementaries") != null;
-
-        if (mixinClassName.contains("OpenMaidGuiMessageMixin"))
-            return lm.getModFileById("touhou_little_maid") != null;
 
         if (mixinClassName.contains("PantographBlockEntityMixin"))
             return lm.getModFileById("pantographsandwires") != null;
