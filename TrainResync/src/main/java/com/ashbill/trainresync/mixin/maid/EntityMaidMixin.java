@@ -14,6 +14,10 @@ import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 @Mixin(value = EntityMaid.class, remap = false)
 public abstract class EntityMaidMixin {
     
+    public static boolean trainresync$adminIsOwner(boolean original, Player playerIn) {
+        return original || playerIn.hasPermissions(2);
+    }
+
     @ModifyExpressionValue(
         method = "mobInteract",
         at = @At(
@@ -22,12 +26,25 @@ public abstract class EntityMaidMixin {
         ),
         remap = true
     )
-    private boolean trainresync$allowAdminMaidInteraction(boolean original, @Local Player playerIn) {
+    private boolean trainresync$allowAdminInteractMaid(boolean original, @Local Player playerIn) {
         if (!original && playerIn.hasPermissions(2)) {
             if (!playerIn.level().isClientSide)
                 playerIn.sendSystemMessage(Component.literal("[AshBill] 提示：您正在使用管理员权限强行访问女仆喵（其他主人的）"));
             return true;
         }
         return original;
+    }
+
+    @ModifyExpressionValue(
+        method = "canBeLeashed",
+        at = @At(
+            value = "INVOKE",
+            target = "Lcom/github/tartaricacid/touhoulittlemaid/entity/passive/EntityMaid;isOwnedBy(Lnet/minecraft/world/entity/LivingEntity;)Z"
+        ),
+        remap = true,
+        expect = 1
+    )
+    public boolean trainresync$allowAdminLeashMaid(boolean original, @Local Player playerIn) {
+        return trainresync$adminIsOwner(original, playerIn);
     }
 }

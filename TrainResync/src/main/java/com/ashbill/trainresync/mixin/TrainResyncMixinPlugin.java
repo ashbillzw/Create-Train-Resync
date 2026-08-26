@@ -26,31 +26,30 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         LoadingModList lm = LoadingModList.get();
 
-        if (mixinClassName.contains("PantographBlockEntityAccessor"))
-            return lm.getModFileById("pantographsandwires") != null;
-
-
-        if (mixinClassName.contains("AbstractMaidContainerMixin"))
-            return lm.getModFileById("touhou_little_maid") != null;
-
-        if (mixinClassName.contains("EntityMaidMixin"))
-            return lm.getModFileById("touhou_little_maid") != null;
-
-        if (mixinClassName.contains("OpenMaidGuiMessageMixin"))
-            return lm.getModFileById("touhou_little_maid") != null;
-
-
-        if (mixinClassName.contains("CarriageMixin"))
-            return lm.getModFileById("pantographsandwires") != null;
-
-        if (mixinClassName.contains("ContraptionPantographMixin"))
-            return lm.getModFileById("pantographsandwires") != null;
-
-        if (mixinClassName.contains("ContraptionSeatMixin"))
+        if (mixinClassName.contains("ContraptionSeatMixin") ||
+            mixinClassName.contains("TrainStatusMixin")
+        )
             return lm.getModFileById("create") != null;
 
-        if (mixinClassName.contains("EntityMixin"))
-            return true;
+
+        if (mixinClassName.contains("PantographBlockEntityAccessor") ||
+            mixinClassName.contains("CarriageMixin") ||
+            mixinClassName.contains("ContraptionPantographMixin") ||
+            mixinClassName.contains("PantographBlockEntityMixin") ||
+            mixinClassName.contains("TrainMixin")
+        )
+            return lm.getModFileById("pantographsandwires") != null;
+
+
+        if (mixinClassName.contains("AbstractMaidContainerMixin") ||
+            mixinClassName.contains("EntityMaidMixin") ||
+            mixinClassName.contains("HandleBackpackEventMixin") ||
+            mixinClassName.contains("MaidConfigMixin") ||
+            mixinClassName.contains("OpenMaidGuiMessageMixin") ||
+            mixinClassName.contains("SetAttackListMessageMixin")
+        )
+            return lm.getModFileById("touhou_little_maid") != null;
+
 
         if (mixinClassName.contains("HeadTailLightMovementBehaviourMixin"))
             return lm.getModFileById("ctl") != null;
@@ -58,14 +57,8 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.contains("LiquidEngineUpgradeMixin"))
             return lm.getModFileById("simpleplanes") != null && lm.getModFileById("supplementaries") != null;
 
-        if (mixinClassName.contains("PantographBlockEntityMixin"))
-            return lm.getModFileById("pantographsandwires") != null;
-
-        if (mixinClassName.contains("TrainMixin"))
-            return lm.getModFileById("pantographsandwires") != null;
-
-        if (mixinClassName.contains("TrainStatusMixin"))
-            return lm.getModFileById("create") != null;
+        if (mixinClassName.contains("EntityMixin"))
+            return true;
 
         return true;
     }

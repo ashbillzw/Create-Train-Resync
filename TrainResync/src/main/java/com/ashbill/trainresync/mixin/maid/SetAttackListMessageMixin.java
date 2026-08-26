@@ -7,23 +7,24 @@ import com.llamalad7.mixinextras.sugar.Local;
 
 import net.minecraft.world.entity.player.Player;
 
-import com.github.tartaricacid.touhoulittlemaid.inventory.container.AbstractMaidContainer;
+import com.github.tartaricacid.touhoulittlemaid.network.message.SetAttackListMessage;
 
 import com.ashbill.trainresync.mixin.maid.EntityMaidMixin;
 
 
-@Mixin(value = AbstractMaidContainer.class, remap = false)
-public abstract class AbstractMaidContainerMixin {
+@Mixin(value = SetAttackListMessage.class, remap = false)
+public abstract class SetAttackListMessageMixin {
     
     @ModifyExpressionValue(
-        method = "stillValid",
+        method = "writeList",
         at = @At(
             value = "INVOKE",
-            target = "Lcom/github/tartaricacid/touhoulittlemaid/entity/passive/EntityMaid;isOwnedBy(Lnet/minecraft/world/entity/LivingEntity;)Z"
+            target = "Lcom/github/tartaricacid/touhoulittlemaid/entity/passive/EntityMaid;isOwnedBy(Lnet/minecraft/world/entity/LivingEntity;)Z",
+            remap = true
         ),
-        remap = true
+        expect = 1
     )
-    private boolean trainresync$allowAdminAccessMaidContainer(boolean original, @Local Player playerIn) {
+    private static boolean trainresync$allowAdminCommandMaidAttack(boolean original, @Local Player playerIn) {
         return EntityMaidMixin.trainresync$adminIsOwner(original, playerIn);
     }
 }

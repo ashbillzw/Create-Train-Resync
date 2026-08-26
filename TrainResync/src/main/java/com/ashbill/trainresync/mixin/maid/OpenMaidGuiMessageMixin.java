@@ -9,12 +9,13 @@ import net.minecraft.world.entity.player.Player;
 
 import com.github.tartaricacid.touhoulittlemaid.network.message.OpenMaidGuiMessage;
 
+import com.ashbill.trainresync.mixin.maid.EntityMaidMixin;
+
 
 @Mixin(value = OpenMaidGuiMessage.class, remap = false)
 public abstract class OpenMaidGuiMessageMixin {
     
     @ModifyExpressionValue(
-
         method = "stillValid",
         at = @At(
             value = "INVOKE",
@@ -22,7 +23,7 @@ public abstract class OpenMaidGuiMessageMixin {
             remap = true
         )
     )
-    private static boolean trainresync$allowAdminMaidGuiMessage(boolean original, @Local Player playerIn) {
-        return original || playerIn.hasPermissions(2);
+    private static boolean trainresync$allowAdminAccessMaidGui(boolean original, @Local Player playerIn) {
+        return EntityMaidMixin.trainresync$adminIsOwner(original, playerIn);
     }
 }
