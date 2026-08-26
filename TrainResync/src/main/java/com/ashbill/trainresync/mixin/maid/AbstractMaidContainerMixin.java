@@ -9,6 +9,8 @@ import net.minecraft.world.entity.player.Player;
 
 import com.github.tartaricacid.touhoulittlemaid.inventory.container.AbstractMaidContainer;
 
+import com.ashbill.trainresync.AdminIsOwner;
+
 
 @Mixin(value = AbstractMaidContainer.class, remap = false)
 public abstract class AbstractMaidContainerMixin {

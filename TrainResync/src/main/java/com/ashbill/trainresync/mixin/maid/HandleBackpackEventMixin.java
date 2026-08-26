@@ -9,6 +9,8 @@ import net.minecraft.world.entity.player.Player;
 
 import com.github.tartaricacid.touhoulittlemaid.event.maid.HandleBackpackEvent;
 
+import com.ashbill.trainresync.AdminIsOwner;
+
 
 @Mixin(value = HandleBackpackEvent.class, remap = false)
 public abstract class HandleBackpackEventMixin {

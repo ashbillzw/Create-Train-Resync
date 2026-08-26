@@ -10,6 +10,8 @@ import net.minecraft.network.chat.Component;
 
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 
+import com.ashbill.trainresync.AdminIsOwner;
+
 
 @Mixin(value = EntityMaid.class, remap = false)
 public abstract class EntityMaidMixin {

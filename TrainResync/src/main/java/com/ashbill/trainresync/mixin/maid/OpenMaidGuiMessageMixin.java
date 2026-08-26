@@ -9,6 +9,8 @@ import net.minecraft.world.entity.player.Player;
 
 import com.github.tartaricacid.touhoulittlemaid.network.message.OpenMaidGuiMessage;
 
+import com.ashbill.trainresync.AdminIsOwner;
+
 
 @Mixin(value = OpenMaidGuiMessage.class, remap = false)
 public abstract class OpenMaidGuiMessageMixin {

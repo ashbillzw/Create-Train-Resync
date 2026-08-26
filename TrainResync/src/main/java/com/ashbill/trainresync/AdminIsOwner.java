@@ -1,4 +1,4 @@
-package com.ashbill.trainresync.mixin.maid;
+package com.ashbill.trainresync;
 
 import net.minecraft.world.entity.player.Player;
 
