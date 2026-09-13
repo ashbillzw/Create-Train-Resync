@@ -1,63 +1,63 @@
 modLoader="javafml"
-loaderVersion="[47,)"
-license="MIT"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
 
 [[mods]]
-modId="trainresync"
-version="1.6.0.d"
-displayName="Train Resync"
-authors="ashbill"
-description='''Fix out-of-sync of Create trains.'''
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="${mod_authors}"
+description='''${mod_description}'''
 
-[[dependencies.trainresync]]
+[[dependencies.${mod_id}]]
 modId="forge"
 mandatory=true
-versionRange="[47,)"
+versionRange="${forge_version_range}"
 ordering="NONE"
 side="BOTH"
 
-[[dependencies.trainresync]]
+[[dependencies.${mod_id}]]
 modId="minecraft"
 mandatory=true
-versionRange="[1.20.1,)"
+versionRange="${minecraft_version_range}"
 ordering="NONE"
 side="BOTH"
 
-[[dependencies.trainresync]]
+[[dependencies.${mod_id}]]
 modId="create"
 mandatory=true
-versionRange="[0.5.1.j,)"
+versionRange="${create_version_range}"
 ordering="AFTER"
 side="BOTH"
 
-[[dependencies.trainresync]]
+[[dependencies.${mod_id}]]
 modId="pantographsandwires"
 mandatory=false
-versionRange="[0.1.1,)"
+versionRange="${pantographsandwires_version_range}"
 ordering="AFTER"
 side="BOTH"
 
-[[dependencies.trainresync]]
+[[dependencies.${mod_id}]]
 modId="simpleplanes"
 mandatory=false
-versionRange="[1.20.1-5.3.3,)"
+versionRange="${simpleplanes_version_range}"
 ordering="AFTER"
 side="BOTH"
 
-[[dependencies.trainresync]]
+[[dependencies.${mod_id}]]
 modId="ctl"
 mandatory=false
-versionRange="[1.0.0,)"
+versionRange="${ctl_version_range}"
 ordering="AFTER"
 side="BOTH"
 
-[[dependencies.trainresync]]
+[[dependencies.${mod_id}]]
 modId="touhou_little_maid"
 mandatory=false
-versionRange="[1.4.0,)"
+versionRange="${touhoulittlemaid_version_range}"
 ordering="AFTER"
 side="BOTH"
 
 [[mixins]]
-modId="trainresync"
+modId="${mod_id}"
 config="trainresync.mixins.json"

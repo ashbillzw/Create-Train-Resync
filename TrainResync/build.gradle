@@ -6,17 +6,20 @@ plugins {
     id 'org.spongepowered.mixin' version '0.7.+'
 }
 
-version = '1.6.0.d'
-group = 'com.ashbill'
+version = mod_version
+group = mod_group_id
 
 base {
-    archivesName = 'trainresync'
+    archivesName = mod_id
 }
 
+// Minecraft 1.20.1 targets Java 17.
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 minecraft {
-    mappings channel: 'official', version: '1.20.1'
+    mappings channel: mapping_channel, version: mapping_version
+    // Process metadata templates for IDE resource output as well.
+    copyIdeResources = true
 }
 
 repositories {
@@ -31,19 +34,19 @@ repositories {
 }
 
 dependencies {
-    minecraft 'net.minecraftforge:forge:1.20.1-47.2.0'
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
-    implementation fg.deobf("local:create:1.20.1-0.5.1.j")
-    implementation fg.deobf("local:pantographsandwires-forge:1.20.1-beta-0.1.1")
-    implementation fg.deobf("local:simpleplanes:1.20.1-5.3.3")
-    implementation fg.deobf("local:ctl-forge:1.0.0")
-    implementation fg.deobf("local:touhoulittlemaid:1.4.0-forge+mc1.20.1")
+    implementation fg.deobf("local:create:${create_version}")
+    implementation fg.deobf("local:pantographsandwires-forge:${pantographsandwires_version}")
+    implementation fg.deobf("local:simpleplanes:${simpleplanes_version}")
+    implementation fg.deobf("local:ctl-forge:${ctl_version}")
+    implementation fg.deobf("local:touhoulittlemaid:${touhoulittlemaid_version}")
 
-    annotationProcessor "org.spongepowered:mixin:0.8.5:processor"
+    annotationProcessor "org.spongepowered:mixin:${mixin_version}:processor"
 
-    compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:0.5.0"))
-    implementation(jarJar("io.github.llamalad7:mixinextras-forge:0.5.0")) {
-        jarJar.ranged(it, "[0.5.0,)")
+    compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:${mixinextras_version}"))
+    implementation(jarJar("io.github.llamalad7:mixinextras-forge:${mixinextras_version}")) {
+        jarJar.ranged(it, mixinextras_version_range)
     }
 }
 
@@ -51,14 +54,14 @@ mixin {
     add sourceSets.main, "trainresync.refmap.json"
 }
 
-jar {
+tasks.named('jar', Jar).configure {
     manifest {
         attributes([
-            "Specification-Title": "trainresync",
-            "Specification-Vendor": "ashbill",
+            "Specification-Title": mod_id,
+            "Specification-Vendor": mod_authors,
             "Implementation-Title": project.name,
             "Implementation-Version": project.version,
-            "Implementation-Vendor": "ashbill",
+            "Implementation-Vendor": mod_authors,
             'MixinConfigs': 'trainresync.mixins.json'
         ])
     }
@@ -66,4 +69,30 @@ jar {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    def replaceProperties = [
+        minecraft_version: minecraft_version,
+        minecraft_version_range: minecraft_version_range,
+        forge_version: forge_version,
+        forge_version_range: forge_version_range,
+        loader_version_range: loader_version_range,
+        mod_id: mod_id,
+        mod_name: mod_name,
+        mod_license: mod_license,
+        mod_version: mod_version,
+        mod_authors: mod_authors,
+        mod_description: mod_description,
+        create_version_range: create_version_range,
+        pantographsandwires_version_range: pantographsandwires_version_range,
+        simpleplanes_version_range: simpleplanes_version_range,
+        ctl_version_range: ctl_version_range,
+        touhoulittlemaid_version_range: touhoulittlemaid_version_range
+    ]
+    inputs.properties replaceProperties
+    filteringCharset = 'UTF-8'
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties + [project: project]
+    }
 }

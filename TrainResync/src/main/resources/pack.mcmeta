@@ -1,6 +1,6 @@
 {
   "pack": {
-    "description": "Train Resync Mod",
+    "description": "${mod_name} Mod",
     "pack_format": 47
   }
 }
