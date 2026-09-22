@@ -1,6 +1,7 @@
 package com.ashbill.trainresync.mixin;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import org.objectweb.asm.tree.ClassNode;
@@ -25,6 +26,11 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         LoadingModList lm = LoadingModList.get();
+
+        if (mixinClassName.contains("MCEFDownloaderMixin")) {
+            return lm.getModFileById("mcef") != null
+                    && System.getProperty("os.name").toLowerCase(Locale.ROOT).startsWith("windows");
+        }
 
         if (mixinClassName.contains("ContraptionSeatMixin") ||
             mixinClassName.contains("TrainStatusMixin")
