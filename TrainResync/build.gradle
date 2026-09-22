@@ -41,6 +41,7 @@ dependencies {
     implementation fg.deobf("local:simpleplanes:${simpleplanes_version}")
     implementation fg.deobf("local:ctl-forge:${ctl_version}")
     implementation fg.deobf("local:touhoulittlemaid:${touhoulittlemaid_version}")
+    compileOnly fg.deobf("local:mcef-forge:${mcef_version}")
 
     annotationProcessor "org.spongepowered:mixin:${mixin_version}:processor"
 
