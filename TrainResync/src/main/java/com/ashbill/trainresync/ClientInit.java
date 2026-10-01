@@ -29,7 +29,7 @@ public class ClientInit {
     private static ResourceKey<Level> lastDimension = null;
     private static int syncCooldown = 0;
     private static final Map<Entity, Integer> checkQueue = new HashMap<>();
-    private static int messageCooldown = -1; // -1 Initial Message, -2 Silent, -3 Verbose
+    private static int messageCooldown = -2; // -1 Initial Message, -2 Silent (default), -3 Verbose
 
     private static boolean isDebugMode = false;
 
