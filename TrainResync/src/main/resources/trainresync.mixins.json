@@ -20,6 +20,7 @@
         "HeadTailLightMovementBehaviourMixin",
         "LiquidEngineUpgradeMixin",
         "PantographBlockEntityMixin",
+        "ServerGamePacketListenerImplMixin",
         "TrainMixin",
         "TrainStatusMixin"
     ],
