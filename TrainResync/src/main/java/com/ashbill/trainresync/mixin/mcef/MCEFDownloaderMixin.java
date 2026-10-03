@@ -2,6 +2,8 @@ package com.ashbill.trainresync.mixin.mcef;
 
 import com.cinemamod.mcef.MCEFDownloader;
 import net.minecraft.client.Minecraft;
+import org.apache.commons.compress.archivers.ArchiveException;
+import org.apache.commons.compress.archivers.examples.Expander;
 import org.apache.commons.io.FileUtils;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -22,11 +24,19 @@ public abstract class MCEFDownloaderMixin {
                 .toAbsolutePath();
         Path runtime = libraries.resolve(platform);
 
-        if (!Files.exists(runtime)) {
-            Path source = Minecraft.getInstance().gameDirectory.toPath()
-                    .resolve("AshBill").resolve("免下载MCEF").resolve("mcef-libraries").resolve(platform);
-            FileUtils.copyDirectory(source.toFile(), runtime.toFile());
+        Path bundled = Minecraft.getInstance().gameDirectory.toPath()
+                .resolve("AshBill").resolve("免下载MCEF");
+        Path archive = bundled.resolve("mcef-libraries.zip");
+        if (Files.exists(archive)) {
+            try {
+                new Expander().expand("zip", archive.toFile(), bundled.toFile());
+            } catch (ArchiveException e) {
+                throw new IOException("Failed to extract bundled MCEF libraries", e);
+            }
+            Files.delete(archive);
         }
+        Path source = bundled.resolve("mcef-libraries").resolve(platform);
+        FileUtils.copyDirectory(source.toFile(), runtime.toFile());
 
         System.setProperty("mcef.libraries.path", libraries.toString());
         System.setProperty("jcef.path", runtime.toString());
