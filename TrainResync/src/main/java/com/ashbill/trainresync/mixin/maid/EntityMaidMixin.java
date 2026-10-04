@@ -25,7 +25,7 @@ public abstract class EntityMaidMixin {
         remap = true
     )
     private boolean trainresync$allowAdminInteractMaid(boolean original, @Local Player playerIn) {
-        if (!original && playerIn.hasPermissions(2)) {
+        if (!original && playerIn.hasPermissions(2) && ((EntityMaid) (Object) this).getOwnerUUID() != null) {
             if (!playerIn.level().isClientSide)
                 playerIn.sendSystemMessage(Component.literal("[AshBill] 提示：您正在使用管理员权限强行访问女仆喵（其他主人的）"));
             return true;
