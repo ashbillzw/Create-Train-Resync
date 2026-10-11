@@ -1,5 +1,6 @@
 package com.ashbill.trainresync.mixin.mcef;
 
+import com.cinemamod.mcef.MCEF;
 import com.cinemamod.mcef.MCEFDownloader;
 import net.minecraft.client.Minecraft;
 import org.apache.commons.compress.archivers.ArchiveException;
@@ -36,7 +37,12 @@ public abstract class MCEFDownloaderMixin {
             Files.delete(archive);
         }
         Path source = bundled.resolve("mcef-libraries").resolve(platform);
-        FileUtils.copyDirectory(source.toFile(), runtime.toFile());
+        try {
+            FileUtils.copyDirectory(source.toFile(), runtime.toFile());
+        } catch (IOException e) {
+            MCEF.getLogger().warn("Failed to copy bundled MCEF libraries to " + runtime
+                    + "; continuing with the existing runtime.", e);
+        }
 
         System.setProperty("mcef.libraries.path", libraries.toString());
         System.setProperty("jcef.path", runtime.toString());
