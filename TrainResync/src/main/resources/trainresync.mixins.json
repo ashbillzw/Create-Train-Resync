@@ -18,6 +18,7 @@
         "ContraptionSeatMixin",
         "EntityMixin",
         "HeadTailLightMovementBehaviourMixin",
+        "LeashableTagMixin",
         "LiquidEngineUpgradeMixin",
         "PantographBlockEntityMixin",
         "ServerGamePacketListenerImplMixin",
