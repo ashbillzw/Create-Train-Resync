@@ -37,6 +37,6 @@ public abstract class LeashableTagMixin {
     )
     private boolean trainresync$allowTaggedMobs(boolean original) {
         Mob mob = (Mob) (Object) this;
-        return original || (!mob.isLeashed() && mob.getType().is(trainresync$CAN_BE_LEASHED));
+        return original || mob.getType().is(trainresync$CAN_BE_LEASHED);
     }
 }
