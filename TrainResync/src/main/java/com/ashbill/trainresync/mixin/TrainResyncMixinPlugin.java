@@ -26,6 +26,11 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         LoadingModList lm = LoadingModList.get();
+        if (mixinClassName.endsWith(".client.FlywheelShaderReloadMixin")) {
+            return lm.getModFileById("oculus") != null
+                    && lm.getModFileById("irisflw") != null
+                    && lm.getModFileById("flywheel") != null;
+        }
 
         if (mixinClassName.contains("MCEFDownloaderMixin")) {
             return lm.getModFileById("mcef") != null
