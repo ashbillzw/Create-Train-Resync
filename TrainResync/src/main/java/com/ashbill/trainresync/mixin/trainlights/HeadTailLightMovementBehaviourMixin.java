@@ -1,4 +1,4 @@
-package com.ashbill.trainresync.mixin;
+package com.ashbill.trainresync.mixin.trainlights;
 
 import java.io.PrintStream;
 

@@ -1,4 +1,4 @@
-package com.ashbill.trainresync.mixin.accessor;
+package com.ashbill.trainresync.mixin.pantographs;
 
 import java.util.Set;
 import org.joml.Vector3d;

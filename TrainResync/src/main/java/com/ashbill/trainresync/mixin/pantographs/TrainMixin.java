@@ -1,4 +1,4 @@
-package com.ashbill.trainresync.mixin;
+package com.ashbill.trainresync.mixin.pantographs;
 
 import java.util.List;
 import java.util.Map;

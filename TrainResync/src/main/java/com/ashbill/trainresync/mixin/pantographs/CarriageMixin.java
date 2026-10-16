@@ -1,4 +1,4 @@
-package com.ashbill.trainresync.mixin;
+package com.ashbill.trainresync.mixin.pantographs;
 
 import java.util.Set;
 import java.util.HashSet;
@@ -35,7 +35,7 @@ import de.mrjulsen.wires.graph.WireGraph;
 import de.mrjulsen.wires.graph.WireGraphManager;
 import de.mrjulsen.paw.blockentity.PantographBlockEntity;
 
-import com.ashbill.trainresync.mixin.accessor.PantographBlockEntityAccessor;
+import com.ashbill.trainresync.mixin.pantographs.PantographBlockEntityAccessor;
 import com.ashbill.trainresync.mixin_interfaces.IElectricTrainContraption;
 import com.ashbill.trainresync.mixin_interfaces.IElectricTrainCarriage;
 

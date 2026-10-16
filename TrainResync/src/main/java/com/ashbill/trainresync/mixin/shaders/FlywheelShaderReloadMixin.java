@@ -1,4 +1,4 @@
-package com.ashbill.trainresync.mixin.client;
+package com.ashbill.trainresync.mixin.shaders;
 
 import com.ashbill.trainresync.compat.FlywheelShaderFormats;
 import org.spongepowered.asm.mixin.Mixin;

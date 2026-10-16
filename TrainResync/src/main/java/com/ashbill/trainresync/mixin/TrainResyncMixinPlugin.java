@@ -25,52 +25,28 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        LoadingModList lm = LoadingModList.get();
-        if (mixinClassName.endsWith(".client.FlywheelShaderReloadMixin")) {
-            return lm.getModFileById("oculus") != null
-                    && lm.getModFileById("irisflw") != null
-                    && lm.getModFileById("flywheel") != null;
-        }
+        LoadingModList mods = LoadingModList.get();
+        String prefix = "com.ashbill.trainresync.mixin.";
 
-        if (mixinClassName.contains("MCEFDownloaderMixin")) {
-            return lm.getModFileById("mcef") != null
+        if (mixinClassName.startsWith(prefix + "vanilla.")) return true;
+        if (mixinClassName.startsWith(prefix + "create.")) return hasMods(mods, "create");
+        if (mixinClassName.startsWith(prefix + "pantographs.")) return hasMods(mods, "pantographsandwires");
+        if (mixinClassName.startsWith(prefix + "maid.")) return hasMods(mods, "touhou_little_maid");
+        if (mixinClassName.startsWith(prefix + "trainlights.")) return hasMods(mods, "ctl");
+        if (mixinClassName.startsWith(prefix + "simpleplanes.")) return hasMods(mods, "simpleplanes", "supplementaries");
+        if (mixinClassName.startsWith(prefix + "shaders.")) return hasMods(mods, "oculus", "irisflw", "flywheel");
+        if (mixinClassName.startsWith(prefix + "mcef.")) {
+            return hasMods(mods, "mcef")
                     && System.getProperty("os.name").toLowerCase(Locale.ROOT).startsWith("windows");
         }
+        // Preserve the existing fallback for mixins outside these optional feature groups.
+        return true;
+    }
 
-        if (mixinClassName.contains("ContraptionSeatMixin") ||
-            mixinClassName.contains("TrainStatusMixin")
-        )
-            return lm.getModFileById("create") != null;
-
-
-        if (mixinClassName.contains("PantographBlockEntityAccessor") ||
-            mixinClassName.contains("CarriageMixin") ||
-            mixinClassName.contains("ContraptionPantographMixin") ||
-            mixinClassName.contains("PantographBlockEntityMixin") ||
-            mixinClassName.contains("TrainMixin")
-        )
-            return lm.getModFileById("pantographsandwires") != null;
-
-
-        if (mixinClassName.contains("AbstractMaidContainerMixin") ||
-            mixinClassName.contains("EntityMaidMixin") ||
-            mixinClassName.contains("HandleBackpackEventMixin") ||
-            mixinClassName.contains("MaidMessageMixin") ||
-            mixinClassName.contains("OpenMaidGuiMessageMixin") ||
-            mixinClassName.contains("SetAttackListMessageMixin")
-        )
-            return lm.getModFileById("touhou_little_maid") != null;
-
-
-        if (mixinClassName.contains("HeadTailLightMovementBehaviourMixin"))
-            return lm.getModFileById("ctl") != null;
-
-        if (mixinClassName.contains("LiquidEngineUpgradeMixin"))
-            return lm.getModFileById("simpleplanes") != null && lm.getModFileById("supplementaries") != null;
-
-        if (mixinClassName.contains("EntityMixin"))
-            return true;
-
+    private static boolean hasMods(LoadingModList mods, String... ids) {
+        for (String id : ids) {
+            if (mods.getModFileById(id) == null) return false;
+        }
         return true;
     }
 }
