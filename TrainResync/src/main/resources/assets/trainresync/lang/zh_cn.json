@@ -1,0 +1,6 @@
+{
+  "trainresync.paw.upper_tension_height_difference": "上部张力线高度差",
+  "trainresync.paw.top_support_height_difference": "顶部支撑线高度差",
+  "trainresync.paw.wire_type": "类型：",
+  "trainresync.paw.remaining_length": "剩余长度：%s米"
+}

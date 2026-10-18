@@ -27,7 +27,9 @@
   ],
   "client": [
     "mcef.MCEFDownloaderMixin",
-    "shaders.FlywheelShaderReloadMixin"
+    "shaders.FlywheelShaderReloadMixin",
+    "pantographs.CatenaryHeadspanWireItemMixin",
+    "pantographs.MultiWireItemMixin"
   ],
   "injectors": {
     "defaultRequire": 1
