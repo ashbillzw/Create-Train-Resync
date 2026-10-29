@@ -104,21 +104,22 @@ public abstract class CarriageMixin implements IElectricTrainCarriage {
     @Override
     public boolean trainresync$hasElectricity(Level level) {
         DimensionalCarriageEntity dce = getDimensional(level);
+        if (trainresync$pantographs.isEmpty()) return false;
+
+        Quaternionf rotation = trainresync$getCarriageRotation(dce);
+        WireGraph wiregraph = WireGraphManager.get(level, WiresApi.PAW_CATENARY_WIRES);
+        Vector3fc rightVector = rotation.transform(new Vector3f().set(PantographBlockEntity.BASE_RIGHT_VECTOR));
+        Vector3d upVector = rotation.transform(new Vector3d(PantographBlockEntity.BASE_UP_VECTOR));
 
         for (BlockPos pantograph : trainresync$pantographs) {
-
-            Quaternionf rotation = trainresync$getCarriageRotation(dce);
             Vector3fc location = dce.positionAnchor.toVector3f().add(rotation.transform(trainresync$initialRotation.transformInverse​(Vec3.atLowerCornerOf(pantograph).toVector3f())));
 
             // DebugPrint.debugPrint("[TR] PANTO LOC: " + new Vector3f(location).toString(new DecimalFormat("0.000")));
 
-            WireGraph wiregraph = WireGraphManager.get(level, WiresApi.PAW_CATENARY_WIRES);
-
-            Vector3fc rightVector = rotation.transform(new Vector3f().set(PantographBlockEntity.BASE_RIGHT_VECTOR));
             for (BlockPos pos : PantographBlockEntityAccessor.trainresync$callFindIntersectingBlocks(
                 new Vector3d(location).sub(rightVector),
                 new Vector3d(location).add(rightVector),
-                rotation.transform(new Vector3d(PantographBlockEntity.BASE_UP_VECTOR))
+                new Vector3d(upVector) // Keep a fresh argument for each intersection query.
             )) if (!wiregraph.getCollisionsInBlock(pos).isEmpty()) return true;
         }
         return false;
