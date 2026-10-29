@@ -21,9 +21,11 @@ MC 1.20.1／Create 0.5.1.j：仅保护 `data/create_tracks.dat`，其他 SavedDa
 
 ### 本地验证
 
+2026-10-30：纯测试源码及测试任务已移到仓库外独立工作区，不再由项目 build.gradle 注册。执行方法、迁移记录和受电弓优化说明见 [交接报告](agent/受电弓优化与测试迁移-20261030.md)。上面的运行时代码保护保持不变。
+
 ```text
-gradlew --offline build railwaySafetyTest
-gradlew --offline railwaySafetyTest -PtracksFixture=<健康DAT路径> -PdamagedTracksFixture=<截断DAT路径>
+powershell -File "D:\mydata\Agents\Minecraft相关\临时测试\TrainResync-铁路保护\run-tests.ps1"
+# 可选：-TracksFixture <健康DAT路径> -DamagedTracksFixture <截断DAT路径>
 ```
 
 测试在独立临时目录运行，不启动 Minecraft；故障测试只强制结束它创建的写入子进程。可选 DAT 样本仅只读访问。最终验证结果、实际 Forge 加载及 Linux 验证范围见本次交接；不将编译与辅助类测试视为生产服运行验收。

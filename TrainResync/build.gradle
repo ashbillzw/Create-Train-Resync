@@ -97,16 +97,3 @@ tasks.named('processResources', ProcessResources).configure {
         expand replaceProperties + [project: project]
     }
 }
-
-// Filesystem failure tests run in a disposable directory, without starting Minecraft.
-tasks.register('railwaySafetyTest', JavaExec) {
-    dependsOn tasks.named('testClasses')
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.ashbill.trainresync.safety.RailwaySafetyTest'
-    if (providers.gradleProperty('tracksFixture').isPresent()) {
-        args providers.gradleProperty('tracksFixture').get()
-        if (providers.gradleProperty('damagedTracksFixture').isPresent()) {
-            args providers.gradleProperty('damagedTracksFixture').get()
-        }
-    }
-}
