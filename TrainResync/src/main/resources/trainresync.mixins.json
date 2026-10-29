@@ -8,6 +8,8 @@
   "mixins": [
     "create.ContraptionSeatMixin",
     "create.TrainStatusMixin",
+    "create.RailwaySavedDataMixin",
+    "create.RailwayDataStorageMixin",
     "maid.AbstractMaidContainerMixin",
     "maid.EntityMaidMixin",
     "maid.HandleBackpackEventMixin",
