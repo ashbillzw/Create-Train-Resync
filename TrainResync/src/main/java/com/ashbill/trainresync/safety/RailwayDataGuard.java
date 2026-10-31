@@ -44,10 +44,10 @@ public final class RailwayDataGuard {
         Path target = target(server);
         NEW_WORLDS.remove(target);
         BLOCKED.remove(target);
-        Path root = server.getWorldPath(LevelResource.ROOT);
-        // Only a genuinely new world may initialize without a railway DAT.
-        // An existing world installing Create for the first time requires explicit migration.
-        boolean newWorld = AtomicRailwayFile.isNewWorld(root);
+        // Snapshot before loadLevel initializes the world. A fresh integrated world already
+        // has level.dat here, so file existence cannot identify its first initialization.
+        // An initialized world installing Create for the first time still needs migration.
+        boolean newWorld = !server.getWorldData().overworldData().isInitialized();
         if (newWorld) NEW_WORLDS.add(target);
         // IntegratedServer must create its progress listener before a load failure can reach
         // the client crash screen. Its strict read guard runs during world loading, before play.

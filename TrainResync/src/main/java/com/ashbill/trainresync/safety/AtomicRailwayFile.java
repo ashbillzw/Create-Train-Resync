@@ -24,13 +24,6 @@ public final class AtomicRailwayFile {
         return target.resolveSibling(target.getFileName() + ".trainresync.tmp");
     }
 
-    public static boolean isNewWorld(Path root) {
-        for (String name : new String[] {"level.dat", "level.dat_old", "region", "data", "DIM-1", "DIM1", "dimensions"}) {
-            if (Files.exists(root.resolve(name), LinkOption.NOFOLLOW_LINKS)) return false;
-        }
-        return true;
-    }
-
     public static void checkState(Path target, boolean allowMissing) throws IOException {
         Path temporary = temporary(target);
         if (Files.exists(temporary, LinkOption.NOFOLLOW_LINKS)) {
