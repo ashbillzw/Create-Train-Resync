@@ -1,6 +1,7 @@
 package com.ashbill.trainresync.safety;
 
 import com.mojang.logging.LogUtils;
+import com.ashbill.trainresync.config.TrainResyncConfig;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,6 +19,7 @@ import net.minecraftforge.event.server.ServerAboutToStartEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
@@ -26,6 +28,7 @@ import org.slf4j.Logger;
 public final class RailwayDataGuard {
     public static final String DATA_NAME = "create_tracks";
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Set<Path> ENABLED = ConcurrentHashMap.newKeySet();
     private static final Set<Path> NEW_WORLDS = ConcurrentHashMap.newKeySet();
     private static final Set<Path> BLOCKED = ConcurrentHashMap.newKeySet();
 
@@ -42,16 +45,28 @@ public final class RailwayDataGuard {
         if (!ModList.get().isLoaded("create")) return;
         MinecraftServer server = event.getServer();
         Path target = target(server);
+        ENABLED.remove(target);
         NEW_WORLDS.remove(target);
         BLOCKED.remove(target);
+        Path configPath = FMLPaths.CONFIGDIR.get().resolve("trainresync.json");
+        try {
+            if (!TrainResyncConfig.load(configPath).railwayDataProtection()) return;
+        } catch (IOException failure) {
+            LOGGER.warn("[TrainResync] Cannot read {}. Railway data protection is disabled.", configPath, failure);
+            return;
+        }
+        ENABLED.add(target);
+        LOGGER.info("[TrainResync] Railway data protection enabled for {}", target);
         // Snapshot before loadLevel initializes the world. A fresh integrated world already
         // has level.dat here, so file existence cannot identify its first initialization.
         // An initialized world installing Create for the first time still needs migration.
         boolean newWorld = !server.getWorldData().overworldData().isInitialized();
         if (newWorld) NEW_WORLDS.add(target);
-        // IntegratedServer must create its progress listener before a load failure can reach
-        // the client crash screen. Its strict read guard runs during world loading, before play.
+
+        // Integrated servers validate during railway loading, after the loading
+        // progress listener exists, so failures can reach the normal error screen.
         if (!server.isDedicatedServer()) return;
+
         try {
             checkLoad(target);
         } catch (IOException failure) {
@@ -62,11 +77,15 @@ public final class RailwayDataGuard {
     @SubscribeEvent
     public static void afterServerStop(ServerStoppedEvent event) {
         Path target = target(event.getServer());
+        ENABLED.remove(target);
         NEW_WORLDS.remove(target);
         BLOCKED.remove(target);
     }
 
+    public static boolean isEnabled(Path target) { return ENABLED.contains(key(target)); }
+
     public static void checkLoad(Path target) throws IOException {
+        if (!isEnabled(target)) return;
         if (BLOCKED.contains(key(target))) throw new IOException("Railway data is blocked: " + target);
         AtomicRailwayFile.checkState(target, NEW_WORLDS.contains(key(target)));
     }

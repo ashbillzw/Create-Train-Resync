@@ -24,8 +24,9 @@ public abstract class RailwaySavedDataMixin {
     @Inject(method = "save(Ljava/io/File;)V", at = @At("HEAD"), cancellable = true)
     private void trainresync$saveAtomically(File file, CallbackInfo ci) {
         if (!((Object) this instanceof RailwaySavedData) || !file.getName().equals("create_tracks.dat")) return;
-        ci.cancel();
         Path target = file.toPath();
+        if (!RailwayDataGuard.isEnabled(target)) return;
+        ci.cancel();
         // A shutdown triggered by a load/save failure must not overwrite the evidence.
         if (RailwayDataGuard.isBlocked(target) || !isDirty()) return;
         try {

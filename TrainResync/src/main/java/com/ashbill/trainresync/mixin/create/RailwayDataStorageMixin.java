@@ -25,6 +25,7 @@ public abstract class RailwayDataStorageMixin {
             String name, Operation<T> original) {
         if (!RailwayDataGuard.DATA_NAME.equals(name)) return original.call(loader, name);
         Path target = getDataFile(name).toPath();
+        if (!RailwayDataGuard.isEnabled(target)) return original.call(loader, name);
         try {
             RailwayDataGuard.checkLoad(target);
             // Only preflight-approved new worlds may take vanilla's initialization path.
