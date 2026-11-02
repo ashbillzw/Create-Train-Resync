@@ -64,6 +64,7 @@
     "vanilla.ServerGamePacketListenerImplMixin"
   ],
   "client": [
+    "cauldron.jei.FruitCauldronCategoryMixin",
     "trainlights.LightBlockChangeMixin",
     "mcef.MCEFDownloaderMixin",
     "shaders.FlywheelShaderReloadMixin",

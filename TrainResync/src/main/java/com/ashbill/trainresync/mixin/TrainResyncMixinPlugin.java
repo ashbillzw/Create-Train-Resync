@@ -33,6 +33,7 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
             if (mixinClassName.startsWith(prefix + "cauldron.tavern.")) return hasMods(mods, "kaleidoscope_tavern");
             if (mixinClassName.startsWith(prefix + "cauldron.cookery.")) return hasMods(mods, "kaleidoscope_cookery");
             if (mixinClassName.startsWith(prefix + "cauldron.supplementaries.")) return hasMods(mods, "supplementaries");
+            if (mixinClassName.startsWith(prefix + "cauldron.jei.")) return hasMods(mods, "jei");
             return true;
         }
         if (mixinClassName.startsWith(prefix + "vanilla.")) return true;
