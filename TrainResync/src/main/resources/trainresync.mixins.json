@@ -7,6 +7,8 @@
   "plugin": "com.ashbill.trainresync.mixin.TrainResyncMixinPlugin",
   "mixins": [
     "create.ContraptionSeatMixin",
+    "create.ContraptionCollisionMixin",
+    "create.ContraptionHandlerMixin",
     "create.TrainStatusMixin",
     "create.RailwaySavedDataMixin",
     "create.RailwayDataStorageMixin",
@@ -23,11 +25,14 @@
     "pantographs.TrainMixin",
     "simpleplanes.LiquidEngineUpgradeMixin",
     "trainlights.HeadTailLightMovementBehaviourMixin",
+    "trainlights.InteriorLightMovementBehaviourMixin",
+    "trainlights.LightMovingInteractionMixin",
     "vanilla.EntityMixin",
     "vanilla.LeashableTagMixin",
     "vanilla.ServerGamePacketListenerImplMixin"
   ],
   "client": [
+    "trainlights.LightBlockChangeMixin",
     "mcef.MCEFDownloaderMixin",
     "shaders.FlywheelShaderReloadMixin",
     "pantographs.CatenaryHeadspanWireItemMixin",
