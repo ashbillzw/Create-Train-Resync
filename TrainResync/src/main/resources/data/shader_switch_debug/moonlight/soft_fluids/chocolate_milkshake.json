@@ -1,0 +1,7 @@
+{
+  "containers": [],
+  "flowing_texture": "neapolitan:block/chocolate_milkshake",
+  "tint_method": "no_tint",
+  "still_texture": "neapolitan:block/chocolate_milkshake",
+  "translation_key": "item.neapolitan.chocolate_milkshake"
+}

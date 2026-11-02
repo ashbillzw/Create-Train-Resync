@@ -28,6 +28,13 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
         LoadingModList mods = LoadingModList.get();
         String prefix = "com.ashbill.trainresync.mixin.";
 
+        if (mixinClassName.startsWith(prefix + "cauldron.")) {
+            if (!com.ashbill.trainresync.compat.cauldron.CauldronCompatibility.available()) return false;
+            if (mixinClassName.startsWith(prefix + "cauldron.tavern.")) return hasMods(mods, "kaleidoscope_tavern");
+            if (mixinClassName.startsWith(prefix + "cauldron.cookery.")) return hasMods(mods, "kaleidoscope_cookery");
+            if (mixinClassName.startsWith(prefix + "cauldron.supplementaries.")) return hasMods(mods, "supplementaries");
+            return true;
+        }
         if (mixinClassName.startsWith(prefix + "vanilla.")) return true;
         if (mixinClassName.startsWith(prefix + "create.")) return hasMods(mods, "create");
         if (mixinClassName.startsWith(prefix + "pantographs.")) return hasMods(mods, "pantographsandwires");

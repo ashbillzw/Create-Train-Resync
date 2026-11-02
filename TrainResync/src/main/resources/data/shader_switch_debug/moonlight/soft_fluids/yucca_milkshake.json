@@ -1,0 +1,7 @@
+{
+  "containers": [],
+  "flowing_texture": "peculiars:block/yucca/yucca_milkshake_cauldron_content",
+  "still_texture": "peculiars:block/yucca/yucca_milkshake_cauldron_content",
+  "tint_method": "no_tint",
+  "translation_key": "item.peculiars.yucca_milkshake"
+}
