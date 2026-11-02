@@ -13,10 +13,17 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value = DyeBottleRecipe.class, remap = false)
 public abstract class DyeBottleRecipeMixin {
+    @Redirect(method = "assemble(Lnet/minecraft/world/inventory/CraftingContainer;Lnet/minecraft/core/RegistryAccess;)Lnet/minecraft/world/item/ItemStack;", at = @At(value = "INVOKE", target = "Lnet/mehvahdjukaar/amendments/common/item/DyeBottleItem;mixColor(IIII)I"))
+    private int trainresync$mixLeatherColor(int dye, int leather, int dyeAmount, int leatherAmount) {
+        if ((dye & 0xFFFFFF) == (leather & 0xFFFFFF)) return leather;
+        return DyeBottleItem.mixColor(dye, leather, dyeAmount, leatherAmount);
+    }
+
     @Unique private static boolean trainresync$validInputs(CraftingContainer container) {
         ItemStack dye = ItemStack.EMPTY, target = ItemStack.EMPTY;
         for (var stack : container.getItems()) {

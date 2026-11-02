@@ -78,6 +78,12 @@ public abstract class MilkTankMixin implements MilkAccess {
             if (fluid.getCount() < oldLayers) trainresync$amount = Math.min(trainresync$amount, (fluid.getCount() * trainresync$limit / 1000) * 250);
         } else trainresync$amount = MilkAmounts.reconcileLayers(trainresync$amount, fluid.getCount());
     }
+    @Inject(method = "m_6596_", at = @At("RETURN"))
+    private void trainresync$refreshHeat(CallbackInfo ci) {
+        var tile = trainresync$tile();
+        HeatSources.contentsChanged(tile.getLevel(), tile.getBlockPos());
+    }
+
     @Inject(method = "getFluidInTank(I)Lnet/minecraftforge/fluids/FluidStack;", at = @At("HEAD"), cancellable = true)
     private void trainresync$contents(int index, CallbackInfoReturnable<FluidStack> cir) {
         if (trainresync$tile().isRemoved()) { cir.setReturnValue(FluidStack.EMPTY); return; }

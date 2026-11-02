@@ -34,6 +34,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(value = CommonCauldronCode.class, remap = false)
 public abstract class CommonCauldronCodeMixin {
+    @Inject(method = "entityInside", at = @At("HEAD"), cancellable = true)
+    private static void trainresync$checkContentContact(BlockState state, Level world, BlockPos pos, Entity entity,
+            Supplier<Double> height, CallbackInfo ci) {
+        if (!(entity instanceof ItemEntity) && !((AbstractCauldronBlockMixin)state.getBlock()).trainresync$inside(state, pos, entity))
+            ci.cancel();
+    }
+
     @Inject(method = "shouldBoil", at = @At("HEAD"), cancellable = true)
     private static void trainresync$activeHeat(BlockState source, SoftFluidStack fluid, LevelAccessor world,
             BlockPos pos, CallbackInfoReturnable<Boolean> cir) {

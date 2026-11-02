@@ -4,6 +4,7 @@ import java.util.Collections;
 import dev.xkmc.fruitsdelight.content.cauldrons.FruitCauldronBlock;
 import dev.xkmc.fruitsdelight.content.cauldrons.JellyCauldronBlock;
 import net.hibiscus.naturespirit.blocks.CheeseCauldronBlock;
+import net.hibiscus.naturespirit.blocks.MilkCauldronBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -14,6 +15,7 @@ import net.mehvahdjukaar.amendments.common.block.ModCauldronBlock;
 public final class CauldronSignals {
     public static int signal(BlockState state, Level world, BlockPos pos) {
         if (state.is(Blocks.CAULDRON)) return 0;
+        if (state.getBlock() instanceof MilkCauldronBlock && state.getValue(MilkCauldronBlock.AGE_INTO_CHEESE)) return 7;
         if (state.getBlock() instanceof CheeseCauldronBlock) return 0;
         if (state.getBlock() instanceof FruitCauldronBlock)
             return 16 - state.getValue(FruitCauldronBlock.LEVEL);
