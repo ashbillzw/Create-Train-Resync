@@ -103,6 +103,13 @@ tasks.named('processResources', ProcessResources).configure {
         ctl_version_range: ctl_version_range,
         touhoulittlemaid_version_range: touhoulittlemaid_version_range
     ]
+    // Keep the integration data inside the JAR, outside the always-active mod datapack.
+    filesMatching(['data/shader_switch_debug/moonlight/soft_fluids/*_milkshake.json',
+                   'data/oei/replacements/milk_integration_test.json', 'data/forge/tags/items/milk/milk_bottle.json',
+                   'data/forge/tags/items/bottles/milk.json', 'data/trainresync/tags/items/cauldron_glow_ingredients.json',
+                   'data/amendments/tags/moonlight/soft_fluids/can_glow.json']) {
+        path = "niijima_cauldron/" + path
+    }
     inputs.properties replaceProperties
     filteringCharset = 'UTF-8'
     filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {

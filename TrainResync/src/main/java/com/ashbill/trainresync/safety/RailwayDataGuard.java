@@ -49,8 +49,10 @@ public final class RailwayDataGuard {
         NEW_WORLDS.remove(target);
         BLOCKED.remove(target);
         Path configPath = FMLPaths.CONFIGDIR.get().resolve("trainresync.json");
+        TrainResyncConfig config;
         try {
-            if (!TrainResyncConfig.load(configPath).railwayDataProtection()) return;
+            config = TrainResyncConfig.load(configPath);
+            if (!config.railwayDataProtection()) return;
         } catch (IOException failure) {
             LOGGER.warn("[TrainResync] Cannot read {}. Railway data protection is disabled.", configPath, failure);
             return;
@@ -68,6 +70,14 @@ public final class RailwayDataGuard {
         if (!server.isDedicatedServer()) return;
 
         try {
+            if (Files.exists(AtomicRailwayFile.temporary(target), java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                Path archive = config.railwayTempArchive() == null ? null : Path.of(config.railwayTempArchive());
+                Path saved = RailwayRecovery.archiveInterruptedSave(target, archive, file -> {
+                    validateGzip(file);
+                    validateRoot(net.minecraft.nbt.NbtIo.readCompressed(file.toFile()));
+                });
+                LOGGER.warn("[TrainResync] Archived interrupted save to {}; loading {}", saved, target);
+            }
             checkLoad(target);
         } catch (IOException failure) {
             throw loadingFailed(target, failure);

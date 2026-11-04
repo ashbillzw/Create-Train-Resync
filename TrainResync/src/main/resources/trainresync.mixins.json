@@ -46,6 +46,7 @@
     "create.ContraptionHandlerMixin",
     "create.TrainStatusMixin",
     "create.RailwaySavedDataMixin",
+    "create.RailwayWatchdogMixin",
     "create.RailwayDataStorageMixin",
     "maid.AbstractMaidContainerMixin",
     "maid.EntityMaidMixin",

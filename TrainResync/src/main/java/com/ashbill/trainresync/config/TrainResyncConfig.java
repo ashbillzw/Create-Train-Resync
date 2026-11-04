@@ -9,8 +9,8 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 
 /** Shared configuration for TrainResync. Missing options are disabled by default. */
-public record TrainResyncConfig(boolean railwayDataProtection) {
-    public static final TrainResyncConfig DEFAULT = new TrainResyncConfig(false);
+public record TrainResyncConfig(boolean railwayDataProtection, String railwayTempArchive) {
+    public static final TrainResyncConfig DEFAULT = new TrainResyncConfig(false, null);
 
     public static TrainResyncConfig load(Path path) throws IOException {
         try (Reader reader = Files.newBufferedReader(path)) {
@@ -21,7 +21,10 @@ public record TrainResyncConfig(boolean railwayDataProtection) {
             if (!option.isJsonPrimitive() || !option.getAsJsonPrimitive().isBoolean()) {
                 throw new IOException("railwayDataProtection must be a boolean: " + path);
             }
-            return new TrainResyncConfig(option.getAsBoolean());
+            JsonElement archive = root.getAsJsonObject().get("railwayTempArchive");
+            return new TrainResyncConfig(option.getAsBoolean(),
+                    archive != null && archive.isJsonPrimitive() && archive.getAsJsonPrimitive().isString()
+                            ? archive.getAsString() : null);
         } catch (NoSuchFileException missing) {
             return DEFAULT;
         } catch (com.google.gson.JsonParseException invalid) {

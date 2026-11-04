@@ -36,6 +36,8 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
             if (mixinClassName.startsWith(prefix + "cauldron.jei.")) return hasMods(mods, "jei");
             return true;
         }
+        if (mixinClassName.equals(prefix + "vanilla.LeashableTagMixin"))
+            return com.ashbill.trainresync.config.NiijimaPack.MANAGED;
         if (mixinClassName.startsWith(prefix + "vanilla.")) return true;
         if (mixinClassName.startsWith(prefix + "create.")) return hasMods(mods, "create");
         if (mixinClassName.startsWith(prefix + "pantographs.")) return hasMods(mods, "pantographsandwires");

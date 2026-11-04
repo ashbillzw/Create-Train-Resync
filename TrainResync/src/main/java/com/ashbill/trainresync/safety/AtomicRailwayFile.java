@@ -13,6 +13,13 @@ import java.nio.file.attribute.PosixFileAttributeView;
 
 /** The temporary file is also the persistent evidence of an uncommitted save. */
 public final class AtomicRailwayFile {
+    private static volatile java.util.concurrent.CountDownLatch activeSave;
+
+    public static void awaitCurrentSave() throws InterruptedException {
+        var save = activeSave;
+        if (save != null) save.await(5, java.util.concurrent.TimeUnit.MINUTES);
+    }
+
     private AtomicRailwayFile() {}
 
     @FunctionalInterface
@@ -40,8 +47,15 @@ public final class AtomicRailwayFile {
     }
 
     public static void write(Path target, Writer writer) throws IOException {
-        write(target, writer, (temporary, destination) ->
-                Files.move(temporary, destination, StandardCopyOption.ATOMIC_MOVE));
+        var save = new java.util.concurrent.CountDownLatch(1);
+        activeSave = save;
+        try {
+            write(target, writer, (temporary, destination) ->
+                    Files.move(temporary, destination, StandardCopyOption.ATOMIC_MOVE));
+        } finally {
+            save.countDown();
+            activeSave = null;
+        }
     }
 
     @FunctionalInterface
