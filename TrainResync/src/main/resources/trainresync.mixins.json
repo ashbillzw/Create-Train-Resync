@@ -41,6 +41,8 @@
     "cauldron.tavern.TapBlockMixin",
     "cauldron.cookery.TeapotBlockEntityMixin",
     "cauldron.tavern.WaterCauldronTapBehaviorMixin",
+    "supplementaries.XPBottlingBehaviorMixin",
+    "create.DoorMovingInteractionMixin",
     "create.ContraptionSeatMixin",
     "create.ContraptionCollisionMixin",
     "create.ContraptionHandlerMixin",

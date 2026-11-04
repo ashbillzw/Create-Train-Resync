@@ -43,6 +43,7 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.startsWith(prefix + "pantographs.")) return hasMods(mods, "pantographsandwires");
         if (mixinClassName.startsWith(prefix + "maid.")) return hasMods(mods, "touhou_little_maid");
         if (mixinClassName.startsWith(prefix + "trainlights.")) return hasMods(mods, "ctl");
+        if (mixinClassName.startsWith(prefix + "supplementaries.")) return hasMods(mods, "supplementaries", "moonlight");
         if (mixinClassName.startsWith(prefix + "simpleplanes.")) return hasMods(mods, "simpleplanes", "supplementaries");
         if (mixinClassName.startsWith(prefix + "shaders.")) return hasMods(mods, "oculus", "irisflw", "flywheel");
         if (mixinClassName.startsWith(prefix + "mcef.")) {
