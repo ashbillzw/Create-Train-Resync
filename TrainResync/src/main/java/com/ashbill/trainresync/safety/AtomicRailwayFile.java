@@ -48,13 +48,17 @@ public final class AtomicRailwayFile {
 
     public static void write(Path target, Writer writer) throws IOException {
         var save = new java.util.concurrent.CountDownLatch(1);
+        var sample = RailwayMemoryDiagnostics.sample();
+        boolean committed = false;
         activeSave = save;
         try {
             write(target, writer, (temporary, destination) ->
                     Files.move(temporary, destination, StandardCopyOption.ATOMIC_MOVE));
+            committed = true;
         } finally {
             save.countDown();
             activeSave = null;
+            RailwayMemoryDiagnostics.report(sample, committed);
         }
     }
 

@@ -79,6 +79,7 @@ public final class RailwayDataGuard {
                 LOGGER.warn("[TrainResync] Archived interrupted save to {}; loading {}", saved, target);
             }
             checkLoad(target);
+            RailwayMemoryDiagnostics.start(FMLPaths.GAMEDIR.get().resolve("logs"));
         } catch (IOException failure) {
             throw loadingFailed(target, failure);
         }
@@ -86,6 +87,7 @@ public final class RailwayDataGuard {
 
     @SubscribeEvent
     public static void afterServerStop(ServerStoppedEvent event) {
+        if (event.getServer().isDedicatedServer()) RailwayMemoryDiagnostics.close();
         Path target = target(event.getServer());
         ENABLED.remove(target);
         NEW_WORLDS.remove(target);
