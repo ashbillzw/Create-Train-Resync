@@ -8,8 +8,7 @@ import net.minecraftforge.fml.DistExecutor;
 @Mod("trainresync")
 public class TrainResyncMod {
     private static void addCauldronData(net.minecraftforge.event.AddPackFindersEvent event) {
-        if (!com.ashbill.trainresync.config.NiijimaPack.MANAGED
-                || event.getPackType() != net.minecraft.server.packs.PackType.SERVER_DATA) return;
+        if (event.getPackType() != net.minecraft.server.packs.PackType.SERVER_DATA) return;
         var file = net.minecraftforge.fml.ModList.get().getModFileById("trainresync");
         var root = file.getFile().findResource("niijima_cauldron");
         event.addRepositorySource(sink -> {

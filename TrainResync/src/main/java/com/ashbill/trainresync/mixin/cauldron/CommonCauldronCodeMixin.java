@@ -1,6 +1,7 @@
 package com.ashbill.trainresync.mixin.cauldron;
 
 import com.ashbill.trainresync.compat.cauldron.CauldronCrafting;
+import com.ashbill.trainresync.compat.cauldron.CauldronDrops;
 import com.ashbill.trainresync.compat.cauldron.HeatSources;
 import net.minecraft.world.level.LevelAccessor;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -47,15 +48,9 @@ public abstract class CommonCauldronCodeMixin {
         if (!HeatSources.active(source, world, pos)) cir.setReturnValue(false);
     }
 
-    @Unique private static final String trainresync$lastCraft = "shader_switch_debug:last_cauldron_craft";
     @Unique private static final ThreadLocal<List<ItemEntity>> trainresync$inputs = new ThreadLocal<>();
     @Unique private static final ThreadLocal<BlockPos> trainresync$position = new ThreadLocal<>();
     @Unique private static final ThreadLocal<Integer> trainresync$arrowRemaining = new ThreadLocal<>();
-
-    @Unique private static boolean trainresync$cooling(Entity entity, Level world) {
-        var data = entity.getPersistentData();
-        return data.contains(trainresync$lastCraft) && world.getGameTime() - data.getLong(trainresync$lastCraft) < 15;
-    }
 
     @Inject(method = "attemptInWorldCrafting", at = @At("HEAD"), cancellable = true)
     private static void trainresync$cooldown(BlockState state, Level world, BlockPos pos, Entity entity,
@@ -63,13 +58,13 @@ public abstract class CommonCauldronCodeMixin {
         trainresync$inputs.remove();
         trainresync$arrowRemaining.remove();
         trainresync$position.set(pos);
-        if (trainresync$cooling(entity, world)) ci.cancel();
+        if (CauldronDrops.isOnCooldown(entity, world)) ci.cancel();
     }
 
     @Redirect(method = "attemptInWorldCrafting", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;m_45976_(Ljava/lang/Class;Lnet/minecraft/world/phys/AABB;)Ljava/util/List;"))
     private static List<ItemEntity> trainresync$eligibleItems(Level world, Class<ItemEntity> type, AABB box) {
         var items = new ArrayList<>(world.getEntitiesOfClass(type, box));
-        items.removeIf(item -> trainresync$cooling(item, world));
+        items.removeIf(item -> CauldronDrops.isOnCooldown(item, world));
         trainresync$inputs.set(items);
         return items;
     }
@@ -88,7 +83,7 @@ public abstract class CommonCauldronCodeMixin {
         }
         if (result != null) for (int i = 0; i < items.size(); i++) {
             if (items.get(i).getCount() < counts[i])
-                trainresync$inputs.get().get(i).getPersistentData().putLong(trainresync$lastCraft, world.getGameTime());
+                trainresync$inputs.get().get(i).getPersistentData().putLong(CauldronDrops.LAST_CRAFT, world.getGameTime());
         }
         return result;
     }
@@ -145,7 +140,7 @@ public abstract class CommonCauldronCodeMixin {
     @Redirect(method = "spawnResultItems", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;m_7967_(Lnet/minecraft/world/entity/Entity;)Z"))
     private static boolean trainresync$stampResult(Level world, Entity result) {
         // Native crafting replaces the input entity; the replacement must retain the cooldown.
-        result.getPersistentData().putLong(trainresync$lastCraft, world.getGameTime());
+        result.getPersistentData().putLong(CauldronDrops.LAST_CRAFT, world.getGameTime());
         return world.addFreshEntity(result);
     }
 

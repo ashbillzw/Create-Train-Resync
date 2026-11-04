@@ -10,6 +10,19 @@ import net.minecraftforge.registries.ForgeRegistries;
 
 /** Shared by the filled-container and empty-container dispenser paths. */
 public final class CauldronContainers {
+    static int containerAmount(String id, String input) {
+        if (id.equals("minecraft:bucket") || (!input.isEmpty() && id.endsWith("_bucket"))) return 1000;
+        if (id.equals("minecraft:glass_bottle") || !input.isEmpty()) return 250;
+        return 0;
+    }
+
+    static boolean canTransfer(String input, String storedType, int stored, int amount) {
+        if (!input.isEmpty())
+            return (stored == 0 || input.equals(storedType)) && MilkAmounts.wholeContainerFits(stored, amount, true);
+        return stored >= amount && !storedType.isEmpty()
+                && (amount == 1000 ? CauldronContents.liquid(storedType) : !storedType.equals("lava"));
+    }
+
     public static InteractionResultHolder<ItemStack> dispense(BlockSource source, ItemStack held) {
         var world = source.getLevel();
         var pos = source.getPos().relative(source.getBlockState().getValue(DispenserBlock.FACING));
@@ -27,20 +40,17 @@ public final class CauldronContainers {
         }
         String id = String.valueOf(ForgeRegistries.ITEMS.getKey(held.getItem()));
         String input = MilkIntegration.inputType(id, held);
-        boolean bucket = id.endsWith("_bucket") && !input.isEmpty();
-        boolean emptyBucket = id.equals("minecraft:bucket"), emptyBottle = id.equals("minecraft:glass_bottle");
-        if (input.isEmpty() && !emptyBucket && !emptyBottle) return null;
+        int amount = containerAmount(id, input);
+        if (amount == 0) return null;
         String type = empty ? "" : tank.trainresync$content();
-        int amount = bucket || emptyBucket ? 1000 : 250;
         int stored = empty ? 0 : tank.trainresync$milkAmount();
+        if (!canTransfer(input, type, stored, amount)) return unchanged;
+        boolean bucket = amount == 1000;
         if (!input.isEmpty()) {
-            if (stored > 0 && !input.equals(type)) return unchanged;
-            if (!MilkAmounts.wholeContainerFits(stored, amount, true)) return unchanged;
             if (MilkIntegration.fillContentAt(world, pos, input, amount, FluidAction.EXECUTE) != amount) return unchanged;
             return InteractionResultHolder.success(MilkIntegration.item(bucket ? "minecraft:bucket" : "minecraft:glass_bottle"));
         }
-        if (stored < amount || type.isEmpty() || (emptyBucket && !CauldronContents.liquid(type)) || (emptyBottle && type.equals("lava"))) return unchanged;
         tank.trainresync$setMilkAmount(stored - amount);
-        return InteractionResultHolder.success(MilkIntegration.output(type, emptyBucket));
+        return InteractionResultHolder.success(MilkIntegration.output(type, bucket));
     }
 }

@@ -11,6 +11,7 @@ import net.mehvahdjukaar.amendments.configs.CommonConfigs;
 import net.mehvahdjukaar.amendments.reg.ModRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.cauldron.CauldronInteraction;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
@@ -21,7 +22,7 @@ import net.minecraft.world.level.gameevent.GameEvent;
 /** Material-only drop adapter: use registered actions without a simulated player. */
 public final class CauldronDrops {
     public static final String LAST_CRAFT = "shader_switch_debug:last_cauldron_craft";
-    public static boolean cooling(ItemEntity entity, Level world) {
+    public static boolean isOnCooldown(Entity entity, Level world) {
         var tag = entity.getPersistentData();
         return tag.contains(LAST_CRAFT) && world.getGameTime() - tag.getLong(LAST_CRAFT) < 15;
     }
@@ -30,7 +31,7 @@ public final class CauldronDrops {
                 || !(state.getBlock() instanceof AbstractCauldronBlock pot)
                 || !((AbstractCauldronBlockMixin)pot).trainresync$inside(state, pos, entity)) return false;
         // Skip our crafting only; retain native lava damage and other entity contact behavior.
-        if (cooling(entity, world)) return false;
+        if (isOnCooldown(entity, world)) return false;
         var held = entity.getItem();
         var access = MilkIntegration.tank(world, pos);
         ItemStack output = MilkConversions.apply(world, pos, held);

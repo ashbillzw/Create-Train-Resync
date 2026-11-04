@@ -27,8 +27,6 @@ public final class MilkIntegration {
     }
 
     private static final ResourceLocation CAULDRON = new ResourceLocation("amendments:liquid_cauldron");
-    public static FluidStack milk(int amount) { return CauldronContents.fluid("milk", amount); }
-    public static boolean isMilk(FluidStack stack) { return CauldronContents.type(stack).equals("milk"); }
     public static MilkAccess tank(Level world, BlockPos pos) {
         BlockEntity tile = world.getBlockEntity(pos);
         return tile instanceof MilkAccess access && access.trainresync$milkAmount() >= 0 ? access : null;
@@ -138,16 +136,14 @@ public final class MilkIntegration {
         String input = inputType(id, held);
         String type = empty ? "" : access.trainresync$content();
         int stored = empty ? 0 : access.trainresync$milkAmount();
-        boolean bucket = id.endsWith("_bucket") && !input.isEmpty();
-        boolean emptyBucket = id.equals("minecraft:bucket");
-        boolean emptyBottle = id.equals("minecraft:glass_bottle");
+        int amount = CauldronContainers.containerAmount(id, input);
         boolean cheese = type.equals("milk") && held.is(NSTags.Items.CHEESE_MAKER);
         String flavor = "";
         for (String candidate : CauldronContents.FLAVORS) {
             if (id.equals(CauldronContents.iceCreamId(candidate))) flavor = candidate;
         }
         boolean shake = type.equals("milk") && !flavor.isEmpty();
-        if (input.isEmpty() && !emptyBucket && !emptyBottle && !cheese && !shake) {
+        if (amount == 0 && !cheese && !shake) {
             InteractionResult result = WaterInteractions.interact(event, access);
             if (result != InteractionResult.PASS) {
                 event.setCanceled(true);
@@ -170,22 +166,15 @@ public final class MilkIntegration {
             }
         } else {
             boolean filling = !input.isEmpty();
-            int amount = bucket || emptyBucket ? 1000 : 250;
-            if (filling) {
-                if (stored > 0 && !input.equals(type)) return;
-                if (!MilkAmounts.wholeContainerFits(stored, amount, true)) return;
-            } else {
-                if (stored < amount || type.isEmpty()) return;
-                if (emptyBucket && !CauldronContents.liquid(type)) return;
-                if (emptyBottle && type.equals("lava")) return;
-            }
+            if (!CauldronContainers.canTransfer(input, type, stored, amount)) return;
+            boolean bucket = amount == 1000;
             if (!world.isClientSide) {
                 if (filling) {
                     if (fillContentAt(world, pos, input, amount, FluidAction.EXECUTE) != amount) return;
                 } else access.trainresync$setMilkAmount(stored - amount);
-                ItemStack result = filling ? item(bucket ? "minecraft:bucket" : "minecraft:glass_bottle") : output(type, emptyBucket);
+                ItemStack result = filling ? item(bucket ? "minecraft:bucket" : "minecraft:glass_bottle") : output(type, bucket);
                 event.getEntity().setItemInHand(event.getHand(), ItemUtils.createFilledResult(held, event.getEntity(), result));
-                sound(world, pos, bucket || emptyBucket, filling, filling ? input : type);
+                sound(world, pos, bucket, filling, filling ? input : type);
                 world.gameEvent(event.getEntity(), filling ? GameEvent.BLOCK_CHANGE : GameEvent.FLUID_PICKUP, pos);
             }
         }

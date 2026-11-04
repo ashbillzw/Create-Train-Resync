@@ -12,8 +12,6 @@ import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.level.Level;
 
 public final class CauldronContact {
-    private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
-    private static int remainingContactSamples = 24;
     private static final String LAST_INSTANT = "shader_switch_debug:last_cauldron_instant";
 
     public static boolean apply(Level world, BlockPos pos, Entity entity) {
@@ -23,11 +21,6 @@ public final class CauldronContact {
         boolean milk = fluid.is(BuiltInSoftFluids.MILK);
         if (fluid.isEmpty() || (!milk && !fluid.is(BuiltInSoftFluids.POTION))) return false;
         if (world.isClientSide || !entity.mayInteract(world, pos)) return true;
-        if (milk && !living.getActiveEffects().isEmpty() && remainingContactSamples > 0) {
-            remainingContactSamples--;
-            LOGGER.info("CAULDRON_EFFECT_CONTACT pos={} state={} feetY={} bounds={}",
-                    pos, world.getBlockState(pos), entity.getY(), entity.getBoundingBox());
-        }
         if (milk) {
             living.curePotionEffects(new ItemStack(Items.MILK_BUCKET));
             return true;

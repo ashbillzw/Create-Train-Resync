@@ -33,22 +33,23 @@ public final class CauldronArrows {
         var input = items.stream().filter(item -> item.is(Items.ARROW)).findFirst().orElseThrow();
         int count = Math.min(amount / 250, batch ? input.getCount() : 1);
         if (count == 0) return null;
-        var output = new ItemStack(potion ? Items.TIPPED_ARROW : Items.SPECTRAL_ARROW, count);
-        if (potion) {
-            // Custom effects retain full duration; preset Potion IDs are divided by eight on hit.
-            var effects = new ArrayList<MobEffectInstance>();
-            for (var effect : PotionUtils.getAllEffects(fluid.getTag())) effects.add(new MobEffectInstance(effect));
-            if (tile.isGlowing()) {
-                var glow = new MobEffectInstance(MobEffects.GLOWING, 200, 0);
-                var existing = effects.stream().filter(e -> e.getEffect() == MobEffects.GLOWING).findFirst();
-                if (existing.isPresent()) existing.get().update(glow);
-                else effects.add(glow);
-            }
-            PotionUtils.setCustomEffects(output, effects);
-        }
+        var output = potion ? tippedArrow(PotionUtils.getAllEffects(fluid.getTag()), tile.isGlowing(), count)
+                : new ItemStack(Items.SPECTRAL_ARROW, count);
         input.shrink(count);
         int remaining = amount - count * 250;
         return new Craft(FluidAndItemCraftResult.of(output, fluid.copyWithCount((remaining + 249) / 250)), remaining);
+    }
+
+    public static ItemStack tippedArrow(List<MobEffectInstance> effects, boolean glowing, int count) {
+        // Custom effects retain full duration on hit.
+        var arrow = new ItemStack(Items.TIPPED_ARROW, count);
+        if (!glowing) return PotionUtils.setCustomEffects(arrow, effects);
+        var copy = new ArrayList<MobEffectInstance>(effects.size() + 1);
+        for (var effect : effects) copy.add(new MobEffectInstance(effect));
+        var glow = new MobEffectInstance(MobEffects.GLOWING, 200);
+        copy.stream().filter(e -> e.getEffect() == MobEffects.GLOWING).findFirst()
+                .ifPresentOrElse(existing -> existing.update(glow), () -> copy.add(glow));
+        return PotionUtils.setCustomEffects(arrow, copy);
     }
 
     public static void setAmount(Level world, BlockPos pos, int amount) {

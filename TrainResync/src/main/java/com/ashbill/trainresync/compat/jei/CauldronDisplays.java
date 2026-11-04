@@ -14,7 +14,6 @@ import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.registration.IRecipeRegistration;
 import net.hibiscus.naturespirit.registration.NSTags;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.effect.*;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -117,17 +116,8 @@ public final class CauldronDisplays {
         for (var potion : ForgeRegistries.POTIONS.getValues()) {
             if (potion.getEffects().isEmpty()) continue;
             var bottle = PotionUtils.setPotion(MilkIntegration.item("minecraft:potion"), potion);
-            var output = MilkIntegration.item("minecraft:tipped_arrow");
-            PotionUtils.setCustomEffects(output, potion.getEffects());
-            process(recipes, arrow, bottle, output, "250 mB");
-            var glowing = new ArrayList<MobEffectInstance>();
-            potion.getEffects().forEach(effect -> glowing.add(new MobEffectInstance(effect)));
-            var glow = new MobEffectInstance(MobEffects.GLOWING, 200);
-            var existing = glowing.stream().filter(effect -> effect.getEffect() == MobEffects.GLOWING).findFirst();
-            if (existing.isPresent()) existing.get().update(glow); else glowing.add(glow);
-            var tipped = MilkIntegration.item("minecraft:tipped_arrow");
-            PotionUtils.setCustomEffects(tipped, glowing);
-            process(recipes, arrow, bottle, tipped, "发光药水 · 250 mB");
+            process(recipes, arrow, bottle, CauldronArrows.tippedArrow(potion.getEffects(), false, 1), "250 mB");
+            process(recipes, arrow, bottle, CauldronArrows.tippedArrow(potion.getEffects(), true, 1), "发光药水 · 250 mB");
         }
     }
 }

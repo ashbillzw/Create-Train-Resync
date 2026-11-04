@@ -38,7 +38,6 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
         }
         if (mixinClassName.equals(prefix + "vanilla.LeashableTagMixin"))
             return com.ashbill.trainresync.config.NiijimaPack.MANAGED;
-        if (mixinClassName.startsWith(prefix + "vanilla.")) return true;
         if (mixinClassName.startsWith(prefix + "create.")) return hasMods(mods, "create");
         if (mixinClassName.startsWith(prefix + "pantographs.")) return hasMods(mods, "pantographsandwires");
         if (mixinClassName.startsWith(prefix + "maid.")) return hasMods(mods, "touhou_little_maid");
