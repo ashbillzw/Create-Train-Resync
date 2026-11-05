@@ -75,7 +75,8 @@
     "mcef.MCEFDownloaderMixin",
     "shaders.FlywheelShaderReloadMixin",
     "pantographs.CatenaryHeadspanWireItemMixin",
-    "pantographs.MultiWireItemMixin"
+    "pantographs.MultiWireItemMixin",
+    "localization.RplClientMessageMixin"
   ],
   "injectors": {
     "defaultRequire": 1

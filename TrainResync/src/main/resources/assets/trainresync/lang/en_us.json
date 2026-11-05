@@ -2,5 +2,13 @@
   "trainresync.paw.upper_tension_height_difference": "Upper Tension Wire height difference",
   "trainresync.paw.top_support_height_difference": "Top Support Wire height difference",
   "trainresync.paw.wire_type": "Type:",
-  "trainresync.paw.remaining_length": "Amount: %sm"
+  "trainresync.paw.remaining_length": "Amount: %sm",
+  "trainresync.kubejs.open_log": "Open Log File",
+  "trainresync.kubejs.quit": "Quit",
+  "trainresync.kubejs.close": "Close",
+  "trainresync.kubejs.report": "Report",
+  "trainresync.kubejs.view_warnings": "View Warnings [%s]",
+  "trainresync.kubejs.view_errors": "View Errors [%s]",
+  "trainresync.rpl.network_mismatch": "Ritchie's Projectile Library on the client uses a different network format than the server.",
+  "trainresync.rpl.matching_format": " Please use a matching format."
 }
