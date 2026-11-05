@@ -40,6 +40,7 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
             return com.ashbill.trainresync.config.NiijimaPack.MANAGED;
         if (mixinClassName.equals(prefix + "localization.RplClientMessageMixin"))
             return hasMods(mods, "ritchiesprojectilelib");
+        if (mixinClassName.startsWith(prefix + "chloride.")) return hasMods(mods, "chloride");
         if (mixinClassName.startsWith(prefix + "create.")) return hasMods(mods, "create");
         if (mixinClassName.startsWith(prefix + "pantographs.")) return hasMods(mods, "pantographsandwires");
         if (mixinClassName.startsWith(prefix + "maid.")) return hasMods(mods, "touhou_little_maid");

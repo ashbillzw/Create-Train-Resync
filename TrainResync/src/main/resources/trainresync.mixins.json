@@ -76,7 +76,8 @@
     "shaders.FlywheelShaderReloadMixin",
     "pantographs.CatenaryHeadspanWireItemMixin",
     "pantographs.MultiWireItemMixin",
-    "localization.RplClientMessageMixin"
+    "localization.RplClientMessageMixin",
+    "chloride.ChlorideFullscreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
