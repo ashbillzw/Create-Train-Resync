@@ -12,17 +12,19 @@ public final class MilkConversions {
     public static ItemStack apply(Level world, BlockPos pos, ItemStack input) {
         var tank = MilkIntegration.tank(world, pos);
         if (tank == null || !tank.trainresync$content().equals("milk") || tank.trainresync$milkAmount() != 1000) return null;
+        ItemStack result = null;
         if (input.is(NSTags.Items.CHEESE_MAKER)) {
-            return world.setBlock(pos, NSBlocks.MILK_CAULDRON.get().defaultBlockState()
+            result = world.setBlock(pos, NSBlocks.MILK_CAULDRON.get().defaultBlockState()
                     .setValue(MilkCauldronBlock.AGE_INTO_CHEESE, true), 3) ? ItemStack.EMPTY : null;
-        }
-        for (var flavor : CauldronContents.FLAVORS) {
+        } else for (var flavor : CauldronContents.FLAVORS) {
             if (input.is(MilkIntegration.item(CauldronContents.iceCreamId(flavor)).getItem())) {
                 int amount = CauldronContents.MILKSHAKE_SERVINGS * 250;
                 tank.trainresync$setContent("shake:" + flavor, amount, amount);
-                return MilkIntegration.item("minecraft:bowl");
+                result = MilkIntegration.item("minecraft:bowl");
+                break;
             }
         }
-        return null;
+        if (result != null) CauldronContainers.sound(world, pos, false, true, "milk");
+        return result;
     }
 }

@@ -2,7 +2,6 @@ package com.ashbill.trainresync.compat.cauldron;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUtils;
@@ -98,13 +97,6 @@ public final class MilkIntegration {
         water.getOrCreateTag().putString("Potion", "minecraft:water");
         return water;
     }
-    private static void sound(Level world, BlockPos pos, boolean bucket, boolean filling, String type) {
-        String id = bucket ? "item.bucket." : "item.bottle.";
-        id += filling ? "empty" : "fill";
-        if (bucket && type.equals("lava")) id += "_lava";
-        var sound = ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("minecraft", id));
-        if (sound != null) world.playSound(null, pos, sound, SoundSource.BLOCKS, 1.0F, 1.0F);
-    }
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void interact(PlayerInteractEvent.RightClickBlock event) {
         Level world = event.getLevel();
@@ -161,21 +153,14 @@ public final class MilkIntegration {
                 if (remainder.isEmpty()) {
                     if (!event.getEntity().isCreative()) held.shrink(1);
                 } else event.getEntity().setItemInHand(event.getHand(), ItemUtils.createFilledResult(held, event.getEntity(), remainder));
-                sound(world, pos, false, true, "milk");
                 world.gameEvent(event.getEntity(), GameEvent.BLOCK_CHANGE, pos);
             }
         } else {
-            boolean filling = !input.isEmpty();
             if (!CauldronContainers.canTransfer(input, type, stored, amount)) return;
-            boolean bucket = amount == 1000;
             if (!world.isClientSide) {
-                if (filling) {
-                    if (fillContentAt(world, pos, input, amount, FluidAction.EXECUTE) != amount) return;
-                } else access.trainresync$setMilkAmount(stored - amount);
-                ItemStack result = filling ? item(bucket ? "minecraft:bucket" : "minecraft:glass_bottle") : output(type, bucket);
+                ItemStack result = CauldronContainers.transfer(world, pos, held, event.getEntity());
+                if (result == null) return;
                 event.getEntity().setItemInHand(event.getHand(), ItemUtils.createFilledResult(held, event.getEntity(), result));
-                sound(world, pos, bucket, filling, filling ? input : type);
-                world.gameEvent(event.getEntity(), filling ? GameEvent.BLOCK_CHANGE : GameEvent.FLUID_PICKUP, pos);
             }
         }
         event.setCancellationResult(InteractionResult.sidedSuccess(world.isClientSide));

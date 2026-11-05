@@ -42,6 +42,7 @@ public final class CauldronDrops {
                 var tile = (LiquidCauldronBlockTile)world.getBlockEntity(pos);
                 tile.getSoftFluidTank().setFluid(DyeBottleItem.toFluidStack(dye.getDyeColor(), 3));
                 tile.setChanged();
+                DyeCauldronBlock.playDyeSoundAndConsume(state, pos, world, null, ItemStack.EMPTY);
                 output = ItemStack.EMPTY;
             } else if (state.getBlock() instanceof DyeCauldronBlock
                     && world.getBlockEntity(pos) instanceof LiquidCauldronBlockTile tile) {
