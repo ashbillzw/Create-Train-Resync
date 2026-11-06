@@ -47,9 +47,8 @@ public final class MilkIntegration {
             if (accepted == 0 || action.simulate()) return accepted;
             if (world.isClientSide) return 0;
             if (empty) {
-                if (!world.setBlock(pos, ForgeRegistries.BLOCKS.getValue(CAULDRON).defaultBlockState(), 3)) return 0;
-                access = tank(world, pos);
-                if (access == null) throw new IllegalStateException("Created cauldron has no integration bridge");
+                access = createTank(world, pos);
+                if (access == null) return 0;
             }
             access.trainresync$setMappedFluid(soft, stored + accepted);
             return accepted;
@@ -68,12 +67,17 @@ public final class MilkIntegration {
         if (accepted == 0 || action.simulate()) return accepted;
         if (world.isClientSide) return 0;
         if (empty) {
-            if (!world.setBlock(pos, ForgeRegistries.BLOCKS.getValue(CAULDRON).defaultBlockState(), 3)) return 0;
-            access = tank(world, pos);
-            if (access == null) throw new IllegalStateException("Created cauldron has no integration bridge");
+            access = createTank(world, pos);
+            if (access == null) return 0;
         }
         access.trainresync$setContent(type, stored + accepted, 1000);
         return accepted;
+    }
+    private static MilkAccess createTank(Level world, BlockPos pos) {
+        if (!world.setBlock(pos, ForgeRegistries.BLOCKS.getValue(CAULDRON).defaultBlockState(), 3)) return null;
+        var access = tank(world, pos);
+        if (access == null) throw new IllegalStateException("Created cauldron has no integration bridge");
+        return access;
     }
     public static ItemStack item(String id) { return new ItemStack(ForgeRegistries.ITEMS.getValue(new ResourceLocation(id))); }
     public static String inputType(String id, ItemStack stack) {

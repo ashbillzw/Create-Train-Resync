@@ -115,9 +115,7 @@ public abstract class MilkTankMixin implements MilkAccess {
         String type = trainresync$content();
         int taken = CauldronContents.liquid(type) || MappedFluids.managed(type) ? MilkAmounts.drain(stored, requested) : 0;
         var result = MappedFluids.contents(this);
-        if (!result.isEmpty()) result.setAmount(taken);
-        if (taken > 0 && action.execute()) trainresync$setMilkAmount(stored - taken);
-        cir.setReturnValue(result);
+        cir.setReturnValue(trainresync$finishDrain(result, stored, taken, action));
     }
     @Inject(method = "drain(Lnet/minecraftforge/fluids/FluidStack;Lnet/minecraftforge/fluids/capability/IFluidHandler$FluidAction;)Lnet/minecraftforge/fluids/FluidStack;", at = @At("HEAD"), cancellable = true)
     private void trainresync$drainTyped(FluidStack requested, FluidAction action, CallbackInfoReturnable<FluidStack> cir) {
@@ -126,9 +124,13 @@ public abstract class MilkTankMixin implements MilkAccess {
         if (stored < 0) return;
         var result = MappedFluids.contents(this);
         int taken = result.isFluidEqual(requested) ? MilkAmounts.drain(stored, requested.getAmount()) : 0;
+        cir.setReturnValue(trainresync$finishDrain(result, stored, taken, action));
+    }
+    @Unique
+    private FluidStack trainresync$finishDrain(FluidStack result, int stored, int taken, FluidAction action) {
         if (!result.isEmpty()) result.setAmount(taken);
         if (taken > 0 && action.execute()) trainresync$setMilkAmount(stored - taken);
-        cir.setReturnValue(result);
+        return result;
     }
     @Inject(method = "isFluidValid", at = @At("HEAD"), cancellable = true)
     private void trainresync$valid(int index, FluidStack input, CallbackInfoReturnable<Boolean> cir) {

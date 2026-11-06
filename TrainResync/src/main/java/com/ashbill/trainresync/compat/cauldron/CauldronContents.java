@@ -8,9 +8,7 @@ import net.mehvahdjukaar.moonlight.api.fluids.*;
 
 public final class CauldronContents {
     public static final int MILKSHAKE_SERVINGS = 4;
-    // Deliberately HARDCODED per the user's 2026-10-16 decision. This is not
-    // tag discovery or a datapack recipe loader. New flavors require code,
-    // matching soft-fluid resources, validation and a rebuilt mod.
+    // Fixed flavors; additions must also update the matching soft-fluid resources.
     private static final Set<String> PECULIARS = Set.of("yucca", "aloe", "passion_fruit");
     public static final Set<String> FLAVORS = Set.of("vanilla", "chocolate", "strawberry", "banana", "mint", "adzuki", "yucca", "aloe", "passion_fruit");
     private static String namespace(String flavor) {

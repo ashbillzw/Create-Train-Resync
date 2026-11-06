@@ -57,8 +57,8 @@ public final class CauldronDrops {
             }
         }
         if (output == null && !(held.getItem() instanceof BucketItem)
-                && !held.is(MilkIntegration.item("minecraft:glass_bottle").getItem())
-                && !held.is(MilkIntegration.item("minecraft:bowl").getItem())) {
+                && !held.is(Items.GLASS_BOTTLE)
+                && !held.is(Items.BOWL)) {
             var view = state;
             var interactions = ((AbstractCauldronBlockAccessor)pot).getInteractions();
             if (access != null && access.trainresync$content().equals("water") && access.trainresync$milkAmount() == 1000) {

@@ -16,8 +16,12 @@ import net.mehvahdjukaar.moonlight.api.fluids.BuiltInSoftFluids;
 /** Preview on copies, then commit consumption only when the items actually change. */
 public final class CauldronCrafting {
     public static boolean canWash(SoftFluidStack fluid, List<ItemStack> items) {
+        return washingResult(fluid, items) != null;
+    }
+
+    private static ItemStack washingResult(SoftFluidStack fluid, List<ItemStack> items) {
         return fluid.is(BuiltInSoftFluids.WATER) && items.size() == 1
-                && washed(items.get(0)) != null;
+                ? washed(items.get(0)) : null;
     }
 
     public static ItemStack washed(ItemStack input) {
@@ -38,13 +42,13 @@ public final class CauldronCrafting {
         var copies = new ArrayList<ItemStack>();
         for (var input : inputs) copies.add(input.copy());
         FluidAndItemCraftResult result;
-        if (!fluid.isEmpty() && canWash(fluid, copies)) {
-            var output = washed(copies.get(0));
+        var output = fluid.isEmpty() ? null : washingResult(fluid, copies);
+        if (output != null) {
             copies.get(0).shrink(1);
             result = FluidAndItemCraftResult.of(output, fluid.copyWithCount(fluid.getCount() - 1));
         } else result = CauldronRecipeUtils.craft(world, boiling, capacity, fluid.copy(), copies);
         if (result == null) return null;
-        var output = result.craftedItem();
+        output = result.craftedItem();
         int consumed = 0;
         boolean same = !output.isEmpty();
         for (int i = 0; i < inputs.size(); i++) {
