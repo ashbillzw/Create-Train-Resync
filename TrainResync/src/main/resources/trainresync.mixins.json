@@ -54,6 +54,7 @@
     "maid.MaidMessageMixin",
     "maid.OpenMaidGuiMessageMixin",
     "maid.SetAttackListMessageMixin",
+    "maid.TaskSnowMixin",
     "pantographs.CarriageMixin",
     "pantographs.ContraptionPantographMixin",
     "pantographs.PantographBlockEntityAccessor",
