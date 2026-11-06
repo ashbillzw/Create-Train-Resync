@@ -97,6 +97,10 @@ public abstract class MilkTankMixin implements MilkAccess {
         if (stored < 0) return;
         var mapped = MappedFluids.fromForge(input);
         if (!mapped.isEmpty() && MappedFluids.managed(CauldronContents.type(mapped))) {
+            if (CauldronPotions.different(this, mapped)) {
+                cir.setReturnValue(input.getAmount() >= 250 ? CauldronPotions.mix(this, mapped, action) : 0);
+                return;
+            }
             int accepted = stored == 0 || trainresync$tank().getFluid().isFluidEqual(mapped) ? MilkAmounts.fill(stored, input.getAmount()) : 0;
             if (accepted > 0 && action.execute()) trainresync$setMappedFluid(mapped, stored + accepted);
             cir.setReturnValue(accepted);
@@ -139,7 +143,8 @@ public abstract class MilkTankMixin implements MilkAccess {
         if (stored >= 0) {
             var mapped = MappedFluids.fromForge(input);
             if (!mapped.isEmpty() && MappedFluids.managed(CauldronContents.type(mapped))) {
-                cir.setReturnValue(index == 0 && (stored == 0 || trainresync$tank().getFluid().isFluidEqual(mapped)));
+                cir.setReturnValue(index == 0 && (stored == 0 || trainresync$tank().getFluid().isFluidEqual(mapped)
+                        || (CauldronPotions.different(this, mapped) && CauldronPotions.mix(this, mapped, FluidAction.SIMULATE) == 250)));
                 return;
             }
             String type = CauldronContents.type(input);

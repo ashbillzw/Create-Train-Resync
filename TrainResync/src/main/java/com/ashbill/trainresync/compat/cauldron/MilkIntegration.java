@@ -42,6 +42,8 @@ public final class MilkIntegration {
             MilkAccess access = tank(world, pos);
             if (!empty && access == null) return -1;
             int stored = empty ? 0 : access.trainresync$milkAmount();
+            if (CauldronPotions.different(access, soft))
+                return stack.getAmount() >= 250 ? CauldronPotions.mix(access, soft, action) : 0;
             if (stored > 0 && !MappedFluids.contents(access).isFluidEqual(stack)) return 0;
             int accepted = MilkAmounts.fill(stored, stack.getAmount());
             if (accepted == 0 || action.simulate()) return accepted;
