@@ -3,6 +3,7 @@ package com.ashbill.trainresync.debug;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -118,9 +119,7 @@ public final class TrainDebugReport {
                 + " distance=" + nav.distanceToSignal + " waitTicks=" + nav.ticksWaitingForSignal
                 + " chained=" + waiting.entrySet().stream().map(e -> e.getKey() + ":"
                         + e.getValue().getFirst().id + ":" + e.getValue().getSecond()).toList());
-        var groups = new LinkedHashSet<>(train.occupiedSignalBlocks.keySet());
-        groups.addAll(train.reservedSignalBlocks);
-        groups.addAll(waiting.keySet());
+        var groups = signalGroups(train, waiting.keySet());
         if (nav.waitingForSignal != null && train.graph != null) {
             SignalBoundary signal = train.graph.getPoint(EdgePointType.SIGNAL, nav.waitingForSignal.getFirst());
             if (signal != null) {
@@ -129,6 +128,13 @@ public final class TrainDebugReport {
             } else out.accept("SIGNAL missing=" + nav.waitingForSignal.getFirst());
         }
         for (UUID group : groups) if (group != null) group(group, out);
+    }
+
+    private static LinkedHashSet<UUID> signalGroups(Train train, Set<UUID> waiting) {
+        var groups = new LinkedHashSet<>(train.occupiedSignalBlocks.keySet());
+        groups.addAll(train.reservedSignalBlocks);
+        groups.addAll(waiting);
+        return groups;
     }
 
     private static void boundary(SignalBoundary signal, Consumer<String> out) {
@@ -177,9 +183,7 @@ public final class TrainDebugReport {
             if (blocking != null && graph.getPoint(EdgePointType.SIGNAL, blocking.getFirst()) == null)
                 findings.add("kind=missing_blocking_signal detail=" + blocking.getFirst());
         }
-        var groups = new LinkedHashSet<>(train.occupiedSignalBlocks.keySet());
-        groups.addAll(train.reservedSignalBlocks);
-        groups.addAll(access(train.navigation).trainresync$waitingGroups().keySet());
+        var groups = signalGroups(train, access(train.navigation).trainresync$waitingGroups().keySet());
         for (UUID id : groups)
             if (!Create.RAILWAYS.signalEdgeGroups.containsKey(id)) findings.add("kind=missing_signal_group detail=" + id);
         findings.forEach(line -> out.accept("FINDING train=" + train.id + " " + line));
@@ -197,9 +201,11 @@ public final class TrainDebugReport {
             if (be instanceof SignalBlockEntity signal) binding(signal.edgePoint, EdgePointType.SIGNAL, out);
             if (be instanceof StationBlockEntity station) binding(station.edgePoint, EdgePointType.STATION, out);
         }
+        var dimension = level.dimension();
+        var center = Vec3.atCenterOf(pos);
         for (TrackGraph graph : Create.RAILWAYS.trackNetworks.values())
             for (TrackNodeLocation location : graph.getNodes())
-                if (location.dimension.equals(level.dimension()) && location.getLocation().distanceToSqr(Vec3.atCenterOf(pos)) <= 64) {
+                if (location.dimension.equals(dimension) && location.getLocation().distanceToSqr(center) <= 64) {
                     TrackNode node = graph.locateNode(location);
                     out.accept("AT graph=" + graph.id + " node=" + location(location) + " connections="
                             + graph.getConnectionsFrom(node).keySet().stream().map(TrainDebugReport::node).toList());
