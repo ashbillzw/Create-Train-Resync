@@ -125,3 +125,10 @@ tasks.register('cauldronAccountingTest', JavaExec) {
     mainClass = 'com.ashbill.trainresync.compat.cauldron.MilkAmountsTest'
 }
 check.dependsOn cauldronAccountingTest
+
+tasks.register('meituanRulesTest', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.ashbill.trainresync.meituan.DeliveryRulesTest'
+}
+check.dependsOn meituanRulesTest
