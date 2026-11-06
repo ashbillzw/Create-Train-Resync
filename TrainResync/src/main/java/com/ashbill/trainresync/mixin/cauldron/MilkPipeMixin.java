@@ -22,7 +22,7 @@ public abstract class MilkPipeMixin extends FluidTank {
     @Inject(method = "drainInner", at = @At("HEAD"), cancellable = true)
     private void trainresync$drainCauldron(int amount, FluidStack filter, FluidAction action, CallbackInfoReturnable<FluidStack> cir) {
         // Let Create empty an existing pipe buffer before drawing from the block.
-        if (!((net.minecraftforge.fluids.capability.templates.FluidTank)(Object)this).getFluid().isEmpty()) return;
+        if (!getFluid().isEmpty()) return;
         var world = this$0.getWorld();
         var pos = this$0.getOutputPos();
         if (world == null || !world.isLoaded(pos)) return;
@@ -43,14 +43,15 @@ public abstract class MilkPipeMixin extends FluidTank {
         if (world == null || !world.isLoaded(pos)) return;
         var tank = MilkIntegration.tank(world, pos);
         var soft = MappedFluids.fromForge(input);
-        if (tank != null && soft.is(BuiltInSoftFluids.POTION)
-                && (CauldronPotions.different(tank, soft) || !getFluid().isEmpty())) {
+        boolean potion = tank != null && soft.is(BuiltInSoftFluids.POTION);
+        boolean different = potion && CauldronPotions.different(tank, soft);
+        if (potion && (different || !getFluid().isEmpty())) {
             if (!getFluid().isEmpty() && !getFluid().isFluidEqual(input)) {
                 cir.setReturnValue(0);
                 return;
             }
             int buffered = getFluidAmount();
-            if (!CauldronPotions.different(tank, soft)) {
+            if (!different) {
                 // If the player changed the cauldron to match, resume ordinary mB transfer.
                 var combined = input.copy();
                 combined.grow(buffered);
@@ -86,7 +87,7 @@ public abstract class MilkPipeMixin extends FluidTank {
             cir.setReturnValue(accepted);
             return;
         }
-        int accepted = MilkIntegration.fillAt(this$0.getWorld(), this$0.getOutputPos(), input, action);
+        int accepted = MilkIntegration.fillAt(world, pos, input, action);
         if (accepted >= 0) cir.setReturnValue(accepted);
     }
 }
