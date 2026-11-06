@@ -1,8 +1,10 @@
 package com.ashbill.trainresync.mixin.cauldron;
 
 import com.ashbill.trainresync.compat.cauldron.*;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import net.minecraft.nbt.CompoundTag;
 import net.mehvahdjukaar.amendments.common.tile.LiquidCauldronBlockTile;
+import net.mehvahdjukaar.amendments.configs.CommonConfigs;
 import net.mehvahdjukaar.moonlight.api.fluids.SoftFluidStack;
 import net.mehvahdjukaar.moonlight.api.fluids.SoftFluidTank;
 import net.minecraftforge.fluids.FluidStack;
@@ -17,6 +19,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /** Exact accounting over Amendments' visual four-layer tank. */
 @Mixin(value = LiquidCauldronBlockTile.class, priority = 1100, remap = false)
 public abstract class MilkTankMixin implements MilkAccess {
+    @ModifyExpressionValue(method = "maybeSendPotionMixMessage", at = @At(value = "INVOKE", target = "Ljava/util/List;size()I"))
+    private int trainresync$warnAboveMixLimit(int effects) {
+        return trainresync$tile().isRemoved() ? 0 : Math.min(effects, CommonConfigs.POTION_MIXING_LIMIT.get());
+    }
+
     @Unique private int trainresync$amount = -1;
     @Unique private int trainresync$limit = 1000;
     @Unique private String trainresync$type = "";

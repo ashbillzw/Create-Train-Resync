@@ -29,7 +29,9 @@ public abstract class SoftFluidTankMixin implements PotionMixingAccess {
         int previous = -1;
         if (!stored.isEmpty() && stored.is(BuiltInSoftFluids.POTION) && input.is(BuiltInSoftFluids.POTION)) {
             var effects = PotionUtils.getAllEffects(stored.getTag());
-            if (!effects.equals(PotionUtils.getAllEffects(input.getTag()))) previous = effects.size();
+            if (PotionUtils.getAllEffects(input.getTag()).stream().anyMatch(added ->
+                    effects.stream().noneMatch(existing -> existing.getEffect() == added.getEffect())))
+                previous = effects.size();
         }
         int added = original.call(input, false);
         trainresync$effectsBeforeMix = added > 0 ? previous : -1;
