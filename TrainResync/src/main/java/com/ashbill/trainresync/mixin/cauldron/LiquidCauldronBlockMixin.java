@@ -4,7 +4,7 @@ import com.ashbill.trainresync.compat.cauldron.MilkIntegration;
 import com.ashbill.trainresync.compat.cauldron.PotionMixingAccess;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Share;
-import com.llamalad7.mixinextras.sugar.ref.LocalIntRef;
+import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import net.mehvahdjukaar.amendments.common.tile.LiquidCauldronBlockTile;
 import net.mehvahdjukaar.amendments.configs.CommonConfigs;
 import net.minecraft.world.item.alchemy.PotionUtils;
@@ -33,19 +33,19 @@ import net.mehvahdjukaar.moonlight.api.fluids.SoftFluidTank;
 public abstract class LiquidCauldronBlockMixin {
     @Inject(method = "maybeExplode", at = @At("HEAD"), cancellable = true)
     private void trainresync$consumeMixState(BlockState state, Level world, BlockPos pos, SoftFluidStack fluid,
-            CallbackInfoReturnable<BlockState> cir, @Share("effectsBeforeMix") LocalIntRef previous) {
-        int before = world.getBlockEntity(pos) instanceof LiquidCauldronBlockTile tile
-                ? ((PotionMixingAccess)tile.getSoftFluidTank()).trainresync$takeEffectsBeforeMix() : -1;
-        previous.set(before);
-        if (before < 0 && PotionUtils.getAllEffects(fluid.getTag()).size() >= CommonConfigs.POTION_MIXING_LIMIT.get())
+            CallbackInfoReturnable<BlockState> cir, @Share("potionMix") LocalRef<PotionMixingAccess.Mix> previous) {
+        var mix = world.getBlockEntity(pos) instanceof LiquidCauldronBlockTile tile
+                ? ((PotionMixingAccess)tile.getSoftFluidTank()).trainresync$takePotionMix() : null;
+        previous.set(mix);
+        if (mix == null && PotionUtils.getAllEffects(fluid.getTag()).size() >= CommonConfigs.POTION_MIXING_LIMIT.get())
             cir.setReturnValue(null);
     }
 
     @ModifyExpressionValue(method = "maybeExplode", at = @At(value = "INVOKE", target = "Ljava/util/List;size()I"))
-    private int trainresync$mixThreshold(int effects, @Share("effectsBeforeMix") LocalIntRef previous) {
+    private int trainresync$mixThreshold(int effects, @Share("potionMix") LocalRef<PotionMixingAccess.Mix> previous) {
         int limit = CommonConfigs.POTION_MIXING_LIMIT.get();
-        if (previous.get() < 0) return effects;
-        return previous.get() >= limit ? limit + 1 : Math.min(effects, limit);
+        var mix = previous.get();
+        return mix == null ? effects : mix.effectsForReaction(effects, limit);
     }
 
     @Inject(method = "handleEntityInsideFluidSpecial", at = @At("HEAD"), cancellable = true)

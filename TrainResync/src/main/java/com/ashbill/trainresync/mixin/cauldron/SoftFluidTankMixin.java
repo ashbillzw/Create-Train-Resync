@@ -14,11 +14,11 @@ import org.spongepowered.asm.mixin.Unique;
 @Mixin(value = SoftFluidTank.class, remap = false)
 public abstract class SoftFluidTankMixin implements PotionMixingAccess {
     @Shadow public abstract SoftFluidStack getFluid();
-    @Unique private int trainresync$effectsBeforeMix = -1;
+    @Unique private PotionMixingAccess.Mix trainresync$pendingMix;
 
-    @Override public int trainresync$takeEffectsBeforeMix() {
-        int previous = trainresync$effectsBeforeMix;
-        trainresync$effectsBeforeMix = -1;
+    @Override public PotionMixingAccess.Mix trainresync$takePotionMix() {
+        var previous = trainresync$pendingMix;
+        trainresync$pendingMix = null;
         return previous;
     }
 
@@ -26,15 +26,15 @@ public abstract class SoftFluidTankMixin implements PotionMixingAccess {
     private int trainresync$rememberPotionMix(SoftFluidStack input, boolean simulate, Operation<Integer> original) {
         if (simulate) return original.call(input, true);
         var stored = getFluid();
-        int previous = -1;
+        PotionMixingAccess.Mix previous = null;
         if (!stored.isEmpty() && stored.is(BuiltInSoftFluids.POTION) && input.is(BuiltInSoftFluids.POTION)) {
             var effects = PotionUtils.getAllEffects(stored.getTag());
-            if (PotionUtils.getAllEffects(input.getTag()).stream().anyMatch(added ->
-                    effects.stream().noneMatch(existing -> existing.getEffect() == added.getEffect())))
-                previous = effects.size();
+            boolean addsNewEffect = PotionUtils.getAllEffects(input.getTag()).stream().anyMatch(added ->
+                    effects.stream().noneMatch(existing -> existing.getEffect() == added.getEffect()));
+            previous = new PotionMixingAccess.Mix(effects.size(), addsNewEffect);
         }
         int added = original.call(input, false);
-        trainresync$effectsBeforeMix = added > 0 ? previous : -1;
+        trainresync$pendingMix = added > 0 ? previous : null;
         return added;
     }
 }
