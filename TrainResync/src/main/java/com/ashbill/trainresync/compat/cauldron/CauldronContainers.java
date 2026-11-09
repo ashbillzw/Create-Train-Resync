@@ -63,12 +63,12 @@ public final class CauldronContainers {
         var tank = MilkIntegration.tank(world, pos);
         boolean empty = MilkIntegration.plain(world.getBlockState(pos));
         if (!empty && tank == null) return null;
-        var unchanged = InteractionResultHolder.success(held);
+        var fallback = InteractionResultHolder.pass(held);
         if (!empty && MappedFluids.managed(tank.trainresync$content())) {
-            if (!MappedFluids.containerFits(tank, held)) return unchanged;
+            if (!MappedFluids.containerFits(tank, held)) return fallback;
             var tile = (LiquidCauldronBlockTile)tank;
             var result = tile.getSoftFluidTank().interactWithItem(held, world, pos, false);
-            if (result == null) return unchanged;
+            if (result == null) return fallback;
             tile.setChanged();
             return InteractionResultHolder.success(result);
         }
@@ -77,6 +77,6 @@ public final class CauldronContainers {
         int amount = containerAmount(id, input);
         if (amount == 0) return null;
         var result = transfer(world, pos, held, null);
-        return result == null ? unchanged : InteractionResultHolder.success(result);
+        return result == null ? fallback : InteractionResultHolder.success(result);
     }
 }
