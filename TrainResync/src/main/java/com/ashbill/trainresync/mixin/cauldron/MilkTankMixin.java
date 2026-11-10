@@ -20,7 +20,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(value = LiquidCauldronBlockTile.class, priority = 1100, remap = false)
 public abstract class MilkTankMixin implements MilkAccess {
     @ModifyExpressionValue(method = "maybeSendPotionMixMessage", at = @At(value = "INVOKE", target = "Ljava/util/List;size()I"))
-    private int trainresync$warnAboveMixLimit(int effects) {
+    private int trainresync$warnAboveMixLimit(int effects, SoftFluidTank tank, net.minecraft.world.entity.player.Player player) {
+        effects = CauldronGlow.mixingCount(net.minecraft.world.item.alchemy.PotionUtils.getAllEffects(tank.getFluid().getTag()));
         return trainresync$tile().isRemoved() ? 0 : Math.min(effects, CommonConfigs.POTION_MIXING_LIMIT.get());
     }
 

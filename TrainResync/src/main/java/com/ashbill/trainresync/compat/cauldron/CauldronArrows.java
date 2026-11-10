@@ -1,10 +1,8 @@
 package com.ashbill.trainresync.compat.cauldron;
 
-import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.PotionUtils;
@@ -43,13 +41,7 @@ public final class CauldronArrows {
     public static ItemStack tippedArrow(List<MobEffectInstance> effects, boolean glowing, int count) {
         // Custom effects retain full duration on hit.
         var arrow = new ItemStack(Items.TIPPED_ARROW, count);
-        if (!glowing) return PotionUtils.setCustomEffects(arrow, effects);
-        var copy = new ArrayList<MobEffectInstance>(effects.size() + 1);
-        for (var effect : effects) copy.add(new MobEffectInstance(effect));
-        var glow = new MobEffectInstance(MobEffects.GLOWING, 200);
-        copy.stream().filter(e -> e.getEffect() == MobEffects.GLOWING).findFirst()
-                .ifPresentOrElse(existing -> existing.update(glow), () -> copy.add(glow));
-        return PotionUtils.setCustomEffects(arrow, copy);
+        return PotionUtils.setCustomEffects(arrow, glowing ? CauldronGlow.withGlow(effects) : effects);
     }
 
     public static void setAmount(Level world, BlockPos pos, int amount) {

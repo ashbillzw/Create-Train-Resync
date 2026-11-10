@@ -48,13 +48,15 @@ public final class CauldronContainers {
         int stored = empty ? 0 : tank.trainresync$milkAmount();
         if (!canTransfer(input, type, stored, amount)) return null;
         boolean filling = !input.isEmpty(), bucket = amount == 1000;
+        boolean glowing = !filling && !bucket && type.equals("water") && ((LiquidCauldronBlockTile)tank).isGlowing();
         if (filling) {
             if (MilkIntegration.fillContentAt(world, pos, input, amount, FluidAction.EXECUTE) != amount) return null;
         } else tank.trainresync$setMilkAmount(stored - amount);
         sound(world, pos, bucket, filling, filling ? input : type);
         world.gameEvent(actor, filling ? GameEvent.BLOCK_CHANGE : GameEvent.FLUID_PICKUP, pos);
-        return filling ? MilkIntegration.item(bucket ? "minecraft:bucket" : "minecraft:glass_bottle")
+        var result = filling ? MilkIntegration.item(bucket ? "minecraft:bucket" : "minecraft:glass_bottle")
                 : MilkIntegration.output(type, bucket);
+        return glowing ? CauldronGlow.bottle(result) : result;
     }
 
     public static InteractionResultHolder<ItemStack> dispense(BlockSource source, ItemStack held) {

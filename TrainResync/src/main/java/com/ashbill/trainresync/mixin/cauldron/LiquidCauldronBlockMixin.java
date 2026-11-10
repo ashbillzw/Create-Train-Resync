@@ -1,6 +1,7 @@
 package com.ashbill.trainresync.mixin.cauldron;
 
 import com.ashbill.trainresync.compat.cauldron.MilkIntegration;
+import com.ashbill.trainresync.compat.cauldron.CauldronGlow;
 import com.ashbill.trainresync.compat.cauldron.PotionMixingAccess;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Share;
@@ -37,12 +38,14 @@ public abstract class LiquidCauldronBlockMixin {
         var mix = world.getBlockEntity(pos) instanceof LiquidCauldronBlockTile tile
                 ? ((PotionMixingAccess)tile.getSoftFluidTank()).trainresync$takePotionMix() : null;
         previous.set(mix);
-        if (mix == null && PotionUtils.getAllEffects(fluid.getTag()).size() >= CommonConfigs.POTION_MIXING_LIMIT.get())
+        if (mix == null && CauldronGlow.mixingCount(PotionUtils.getAllEffects(fluid.getTag())) >= CommonConfigs.POTION_MIXING_LIMIT.get())
             cir.setReturnValue(null);
     }
 
     @ModifyExpressionValue(method = "maybeExplode", at = @At(value = "INVOKE", target = "Ljava/util/List;size()I"))
-    private int trainresync$mixThreshold(int effects, @Share("potionMix") LocalRef<PotionMixingAccess.Mix> previous) {
+    private int trainresync$mixThreshold(int effects, BlockState state, Level world, BlockPos pos, SoftFluidStack fluid,
+            @Share("potionMix") LocalRef<PotionMixingAccess.Mix> previous) {
+        effects = CauldronGlow.mixingCount(PotionUtils.getAllEffects(fluid.getTag()));
         int limit = CommonConfigs.POTION_MIXING_LIMIT.get();
         var mix = previous.get();
         return mix == null ? effects : mix.effectsForReaction(effects, limit);

@@ -48,7 +48,8 @@ public abstract class CommonCauldronCodeMixin {
     private static void trainresync$potionBeforeExtinguishing(Level world, BlockPos pos, Entity entity, CallbackInfo ci) {
         // The last portion must still be present when its effects are read.
         if (world.getBlockEntity(pos) instanceof LiquidCauldronBlockTile tile
-                && tile.getSoftFluidTank().getFluid().is(BuiltInSoftFluids.POTION))
+                && (tile.getSoftFluidTank().getFluid().is(BuiltInSoftFluids.POTION)
+                    || (tile.isGlowing() && tile.getSoftFluidTank().getFluid().is(BuiltInSoftFluids.WATER))))
             CauldronContact.apply(world, pos, entity);
     }
 

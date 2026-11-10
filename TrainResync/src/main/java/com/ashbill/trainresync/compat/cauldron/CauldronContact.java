@@ -19,7 +19,8 @@ public final class CauldronContact {
                 || !(world.getBlockEntity(pos) instanceof LiquidCauldronBlockTile tile)) return false;
         var fluid = tile.getSoftFluidTank().getFluid();
         boolean milk = fluid.is(BuiltInSoftFluids.MILK);
-        if (fluid.isEmpty() || (!milk && !fluid.is(BuiltInSoftFluids.POTION))) return false;
+        boolean glowingWater = fluid.is(BuiltInSoftFluids.WATER) && tile.isGlowing();
+        if (fluid.isEmpty() || (!milk && !glowingWater && !fluid.is(BuiltInSoftFluids.POTION))) return false;
         if (world.isClientSide || !entity.mayInteract(world, pos)) return true;
         if (milk) {
             living.curePotionEffects(new ItemStack(Items.MILK_BUCKET));
@@ -29,7 +30,9 @@ public final class CauldronContact {
         long now = world.getGameTime();
         boolean instantReady = !data.contains(LAST_INSTANT) || now - data.getLong(LAST_INSTANT) >= 10;
         boolean instantApplied = false;
-        for (var effect : PotionUtils.getAllEffects(fluid.getTag())) {
+        var effects = PotionUtils.getAllEffects(fluid.getTag());
+        if (tile.isGlowing()) effects = CauldronGlow.withGlow(effects);
+        for (var effect : effects) {
             var type = effect.getEffect();
             if (type.isInstantenous()) {
                 if (instantReady) {
