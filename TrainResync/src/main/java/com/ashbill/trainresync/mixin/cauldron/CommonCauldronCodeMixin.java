@@ -1,6 +1,8 @@
 package com.ashbill.trainresync.mixin.cauldron;
 
 import com.ashbill.trainresync.compat.cauldron.CauldronCrafting;
+import com.ashbill.trainresync.compat.cauldron.CauldronContact;
+import net.mehvahdjukaar.amendments.common.tile.LiquidCauldronBlockTile;
 import com.ashbill.trainresync.compat.cauldron.CauldronDrops;
 import com.ashbill.trainresync.compat.cauldron.HeatSources;
 import net.minecraft.world.level.LevelAccessor;
@@ -40,6 +42,14 @@ public abstract class CommonCauldronCodeMixin {
             Supplier<Double> height, CallbackInfo ci) {
         if (!(entity instanceof ItemEntity) && !((AbstractCauldronBlockMixin)state.getBlock()).trainresync$inside(state, pos, entity))
             ci.cancel();
+    }
+
+    @Inject(method = "extinguishLikeSuperLayeredCauldron", at = @At("HEAD"))
+    private static void trainresync$potionBeforeExtinguishing(Level world, BlockPos pos, Entity entity, CallbackInfo ci) {
+        // The last portion must still be present when its effects are read.
+        if (world.getBlockEntity(pos) instanceof LiquidCauldronBlockTile tile
+                && tile.getSoftFluidTank().getFluid().is(BuiltInSoftFluids.POTION))
+            CauldronContact.apply(world, pos, entity);
     }
 
     @Inject(method = "shouldBoil", at = @At("HEAD"), cancellable = true)

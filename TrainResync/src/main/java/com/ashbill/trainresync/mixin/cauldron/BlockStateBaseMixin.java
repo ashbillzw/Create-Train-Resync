@@ -19,7 +19,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class BlockStateBaseMixin {
     @Inject(method = "m_60682_", at = @At("HEAD"), cancellable = true)
     private void trainresync$dropMaterial(Level world, BlockPos pos, Entity entity, CallbackInfo ci) {
-        if (entity instanceof ItemEntity item && CauldronDrops.accept((BlockState)(Object)this, world, pos, item)) ci.cancel();
+        var state = (BlockState)(Object)this;
+        // Some modded pots compute their own contact height instead of calling the vanilla predicate.
+        if (!(entity instanceof ItemEntity) && state.getBlock() instanceof AbstractCauldronBlock
+                && entity.getBoundingBox().minY >= pos.getY() + 0.625) {
+            ci.cancel();
+            return;
+        }
+        if (entity instanceof ItemEntity item && CauldronDrops.accept(state, world, pos, item)) ci.cancel();
     }
     @Inject(method = "m_60807_", at = @At("HEAD"), cancellable = true)
     private void trainresync$cauldronComparator(CallbackInfoReturnable<Boolean> cir) {

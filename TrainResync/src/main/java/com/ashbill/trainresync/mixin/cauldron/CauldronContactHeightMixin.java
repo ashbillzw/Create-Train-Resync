@@ -14,7 +14,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class CauldronContactHeightMixin {
     @Inject(method = "isEntityInsideContent", at = @At("HEAD"), cancellable = true)
     private void trainresync$limitContactHeight(BlockState state, BlockPos pos, Entity entity, CallbackInfoReturnable<Boolean> cir) {
-        if (!(entity instanceof ItemEntity) && entity.getBoundingBox().minY >= pos.getY() + 0.5)
+        // Inner floor is 4/16 and rim is 16/16; cap contact at their midpoint (10/16).
+        if (!(entity instanceof ItemEntity) && entity.getBoundingBox().minY >= pos.getY() + 0.625)
             cir.setReturnValue(false);
     }
 }

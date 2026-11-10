@@ -41,7 +41,7 @@ public final class CauldronContact {
                 if (current == null || current.getAmplifier() < effect.getAmplifier()
                         || (current.getAmplifier() == effect.getAmplifier()
                             && current.getDuration() != -1
-                            && (effect.getDuration() == -1 || current.getDuration() < effect.getDuration())))
+                            && (effect.getDuration() == -1 || effect.getDuration() - current.getDuration() >= 10)))
                     living.addEffect(new MobEffectInstance(effect));
             }
         }
