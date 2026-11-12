@@ -1,0 +1,6 @@
+{
+  "values": [
+    { "id": "numismatics:blaze_banker", "required": false },
+    { "id": "createaddition:liquid_blaze_burner", "required": false }
+  ]
+}

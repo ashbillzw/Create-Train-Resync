@@ -22,6 +22,7 @@
     "cauldron.supplementaries.FaucetBlockTileMixin",
     "cauldron.FDCauldronBlockMixin",
     "cauldron.FDCauldronInteractionMixin",
+    "cauldron.GlowingPotionNameMixin",
     "cauldron.HeatableBlockEntityMixin",
     "cauldron.tavern.LavaCauldronTapBehaviorMixin",
     "cauldron.LayeredCauldronBlockMixin",
@@ -70,6 +71,11 @@
     "vanilla.ServerGamePacketListenerImplMixin"
   ],
   "client": [
+    "search.CreativeSearchBoxAccessor",
+    "search.modernfix.LazySearchTreeAccessor",
+    "search.modernfix.CreativeSearchPrefixMixin",
+    "search.JeiSearchFieldAccessor",
+    "cauldron.LiquidCauldronParticlesMixin",
     "cauldron.jei.FruitCauldronCategoryMixin",
     "trainlights.LightBlockChangeMixin",
     "mcef.MCEFDownloaderMixin",

@@ -16,17 +16,43 @@ import net.minecraftforge.registries.ForgeRegistries;
 
 /** Transfer contents once; each caller handles its inventory or item entity. */
 public final class CauldronContainers {
+    record Transfer(String input, int amount, String type, int stored) {
+        boolean fits() {
+            if (!input.isEmpty())
+                return (stored == 0 || input.equals(type)) && MilkAmounts.wholeContainerFits(stored, amount, true);
+            return stored >= amount && !type.isEmpty()
+                    && (amount == 1000 ? CauldronContents.liquid(type) : !type.equals("lava"));
+        }
+
+        ItemStack execute(Level world, BlockPos pos, ItemStack held, Entity actor, MilkAccess tank) {
+            boolean filling = !input.isEmpty(), bucket = amount == 1000;
+            boolean glowing = !filling && !bucket && type.equals("water") && ((LiquidCauldronBlockTile)tank).isGlowing();
+            if (filling) {
+                if (MilkIntegration.fillContentAt(world, pos, input, amount, FluidAction.EXECUTE) != amount) return null;
+                if (held.is(net.minecraft.world.item.Items.POTION) && input.equals("water")
+                        && !net.minecraft.world.item.alchemy.PotionUtils.getCustomEffects(held).isEmpty()
+                        && world.getBlockEntity(pos) instanceof LiquidCauldronBlockTile tile && !tile.isGlowing())
+                    tile.setGlowing(true);
+            } else tank.trainresync$setMilkAmount(stored - amount);
+            sound(world, pos, bucket, filling, filling ? input : type);
+            world.gameEvent(actor, filling ? GameEvent.BLOCK_CHANGE : GameEvent.FLUID_PICKUP, pos);
+            var result = filling ? MilkIntegration.item(bucket ? "minecraft:bucket" : "minecraft:glass_bottle")
+                    : MilkIntegration.output(type, bucket);
+            return glowing ? CauldronGlow.bottle(result) : result;
+        }
+    }
+
+    static Transfer prepare(String id, ItemStack held, MilkAccess tank) {
+        String input = MilkIntegration.inputType(id, held);
+        int amount = containerAmount(id, input);
+        return new Transfer(input, amount, tank == null ? "" : tank.trainresync$content(),
+                tank == null ? 0 : tank.trainresync$milkAmount());
+    }
+
     static int containerAmount(String id, String input) {
         if (id.equals("minecraft:bucket") || (!input.isEmpty() && id.endsWith("_bucket"))) return 1000;
         if (id.equals("minecraft:glass_bottle") || !input.isEmpty()) return 250;
         return 0;
-    }
-
-    static boolean canTransfer(String input, String storedType, int stored, int amount) {
-        if (!input.isEmpty())
-            return (stored == 0 || input.equals(storedType)) && MilkAmounts.wholeContainerFits(stored, amount, true);
-        return stored >= amount && !storedType.isEmpty()
-                && (amount == 1000 ? CauldronContents.liquid(storedType) : !storedType.equals("lava"));
     }
 
     static void sound(Level world, BlockPos pos, boolean bucket, boolean filling, String type) {
@@ -40,23 +66,8 @@ public final class CauldronContainers {
         var tank = MilkIntegration.tank(world, pos);
         boolean empty = MilkIntegration.plain(world.getBlockState(pos));
         if (!empty && tank == null) return null;
-        String id = String.valueOf(ForgeRegistries.ITEMS.getKey(held.getItem()));
-        String input = MilkIntegration.inputType(id, held);
-        int amount = containerAmount(id, input);
-        if (amount == 0) return null;
-        String type = empty ? "" : tank.trainresync$content();
-        int stored = empty ? 0 : tank.trainresync$milkAmount();
-        if (!canTransfer(input, type, stored, amount)) return null;
-        boolean filling = !input.isEmpty(), bucket = amount == 1000;
-        boolean glowing = !filling && !bucket && type.equals("water") && ((LiquidCauldronBlockTile)tank).isGlowing();
-        if (filling) {
-            if (MilkIntegration.fillContentAt(world, pos, input, amount, FluidAction.EXECUTE) != amount) return null;
-        } else tank.trainresync$setMilkAmount(stored - amount);
-        sound(world, pos, bucket, filling, filling ? input : type);
-        world.gameEvent(actor, filling ? GameEvent.BLOCK_CHANGE : GameEvent.FLUID_PICKUP, pos);
-        var result = filling ? MilkIntegration.item(bucket ? "minecraft:bucket" : "minecraft:glass_bottle")
-                : MilkIntegration.output(type, bucket);
-        return glowing ? CauldronGlow.bottle(result) : result;
+        var transfer = prepare(String.valueOf(ForgeRegistries.ITEMS.getKey(held.getItem())), held, empty ? null : tank);
+        return transfer.amount() > 0 && transfer.fits() ? transfer.execute(world, pos, held, actor, tank) : null;
     }
 
     public static InteractionResultHolder<ItemStack> dispense(BlockSource source, ItemStack held) {
@@ -74,11 +85,10 @@ public final class CauldronContainers {
             tile.setChanged();
             return InteractionResultHolder.success(result);
         }
-        String id = String.valueOf(ForgeRegistries.ITEMS.getKey(held.getItem()));
-        String input = MilkIntegration.inputType(id, held);
-        int amount = containerAmount(id, input);
-        if (amount == 0) return null;
-        var result = transfer(world, pos, held, null);
+        var transfer = prepare(String.valueOf(ForgeRegistries.ITEMS.getKey(held.getItem())), held, empty ? null : tank);
+        if (transfer.amount() == 0) return null;
+        if (!transfer.fits()) return fallback;
+        var result = transfer.execute(world, pos, held, null, tank);
         return result == null ? fallback : InteractionResultHolder.success(result);
     }
 }

@@ -2,6 +2,7 @@ package com.ashbill.trainresync.mixin.cauldron;
 
 import com.ashbill.trainresync.compat.cauldron.MilkIntegration;
 import com.ashbill.trainresync.compat.cauldron.CauldronPotions;
+import com.ashbill.trainresync.compat.cauldron.CauldronGlow;
 import com.ashbill.trainresync.compat.cauldron.MappedFluids;
 import net.mehvahdjukaar.moonlight.api.fluids.BuiltInSoftFluids;
 import com.simibubi.create.content.fluids.OpenEndedPipe;
@@ -42,9 +43,10 @@ public abstract class MilkPipeMixin extends FluidTank {
         var pos = this$0.getOutputPos();
         if (world == null || !world.isLoaded(pos)) return;
         var tank = MilkIntegration.tank(world, pos);
+        if (tank == null && !MilkIntegration.plain(world.getBlockState(pos))) return;
         var soft = MappedFluids.fromForge(input);
-        boolean potion = tank != null && soft.is(BuiltInSoftFluids.POTION);
-        boolean different = potion && CauldronPotions.different(tank, soft);
+        boolean potion = tank != null && (soft.is(BuiltInSoftFluids.POTION) || soft.is(BuiltInSoftFluids.WATER));
+        boolean different = potion && CauldronPotions.different(tank, CauldronGlow.unpack(soft));
         if (potion && (different || !getFluid().isEmpty())) {
             if (!getFluid().isEmpty() && !getFluid().isFluidEqual(input)) {
                 cir.setReturnValue(0);

@@ -6,7 +6,14 @@ import net.mehvahdjukaar.amendments.common.tile.LiquidCauldronBlockTile;
 import com.ashbill.trainresync.compat.cauldron.CauldronDrops;
 import com.ashbill.trainresync.compat.cauldron.HeatSources;
 import net.minecraft.world.level.LevelAccessor;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import com.ashbill.trainresync.compat.cauldron.CauldronViews;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.simibubi.create.content.fluids.tank.BoilerHeaters;
+import net.mehvahdjukaar.amendments.common.block.LiquidCauldronBlock;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import com.ashbill.trainresync.compat.cauldron.CauldronArrows;
 import com.ashbill.trainresync.compat.cauldron.MilkIntegration;
 import java.util.ArrayList;
@@ -53,10 +60,15 @@ public abstract class CommonCauldronCodeMixin {
             CauldronContact.apply(world, pos, entity);
     }
 
-    @Inject(method = "shouldBoil", at = @At("HEAD"), cancellable = true)
-    private static void trainresync$activeHeat(BlockState source, SoftFluidStack fluid, LevelAccessor world,
-            BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
-        if (!HeatSources.active(source, world, pos)) cir.setReturnValue(false);
+    @WrapOperation(method = "shouldBoil", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/level/block/state/BlockState;m_204336_(Lnet/minecraft/tags/TagKey;)Z"))
+    private static boolean trainresync$potHeat(BlockState source, TagKey<Block> tag, Operation<Boolean> original,
+            BlockState below, SoftFluidStack fluid, LevelAccessor world, BlockPos pos) {
+        if (source.is(HeatSources.FROM_BOILER) && world instanceof Level level)
+            return BoilerHeaters.getActiveHeat(level, pos, source) >= 0;
+        if (source.getBlock() instanceof LiquidCauldronBlock && CauldronViews.containsLava(world, pos))
+            source = Blocks.LAVA_CAULDRON.defaultBlockState();
+        return original.call(source, tag) && HeatSources.active(source, world, pos);
     }
 
     @Unique private static final ThreadLocal<List<ItemEntity>> trainresync$inputs = new ThreadLocal<>();

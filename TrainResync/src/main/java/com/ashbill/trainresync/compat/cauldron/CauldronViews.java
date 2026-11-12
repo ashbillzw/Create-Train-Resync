@@ -10,9 +10,13 @@ import net.minecraft.world.level.block.state.BlockState;
 /** Local views for audited callers; never changes the block in the world. */
 public final class CauldronViews {
     public static BlockState heat(BlockGetter world, BlockPos pos) {
-        if (world.getBlockEntity(pos) instanceof MilkAccess tank && tank.trainresync$content().equals("lava") && tank.trainresync$milkAmount() > 0)
+        if (containsLava(world, pos))
             return Blocks.LAVA_CAULDRON.defaultBlockState();
         return HeatSources.view(world, pos);
+    }
+    public static boolean containsLava(BlockGetter world, BlockPos pos) {
+        return world.getBlockEntity(pos) instanceof MilkAccess tank
+                && tank.trainresync$content().equals("lava") && tank.trainresync$milkAmount() > 0;
     }
     public static BlockState tap(Level world, BlockPos pos) {
         var tank = MilkIntegration.tank(world, pos);

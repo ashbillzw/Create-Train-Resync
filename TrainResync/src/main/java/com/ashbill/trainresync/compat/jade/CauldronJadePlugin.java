@@ -4,6 +4,7 @@ import com.ashbill.trainresync.compat.cauldron.MilkAccess;
 import com.ashbill.trainresync.compat.cauldron.CauldronContents;
 import com.ashbill.trainresync.compat.cauldron.CauldronCompatibility;
 
+import net.mehvahdjukaar.moonlight.api.fluids.BuiltInSoftFluids;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -31,6 +32,11 @@ public final class CauldronJadePlugin implements IWailaPlugin {
         @Override public ResourceLocation getUid() { return UID; }
         @Override public void appendServerData(CompoundTag data, BlockAccessor accessor) {
             if (!(accessor.getBlockEntity() instanceof MilkAccess access)) return;
+            if (accessor.getBlockEntity() instanceof LiquidCauldronBlockTile tile && tile.isGlowing()) {
+                var fluid = tile.getSoftFluidTank().getFluid();
+                if (fluid.is(BuiltInSoftFluids.WATER) || fluid.is(BuiltInSoftFluids.POTION))
+                    data.putBoolean("trainresync_glowing", true);
+            }
             String type = access.trainresync$content();
             if (!CauldronContents.shake(type) || access.trainresync$milkAmount() <= 0) return;
             data.putString("sd_shake_flavor", type.substring(6));
@@ -48,6 +54,7 @@ public final class CauldronJadePlugin implements IWailaPlugin {
                 return;
             }
             CompoundTag data = accessor.getServerData();
+            if (data.getBoolean("trainresync_glowing")) tooltip.add(Component.translatable("effect.minecraft.glowing"));
             String flavor = data.getString("sd_shake_flavor");
             if (!CauldronContents.FLAVORS.contains(flavor)) return;
             int servings = data.getInt("sd_shake_servings");

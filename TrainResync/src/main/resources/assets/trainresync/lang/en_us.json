@@ -1,4 +1,8 @@
 {
+  "trainresync.search.help.mods": "@ Mod name    # Tooltip",
+  "trainresync.search.help.tags": "$ Tag    ^ Color",
+  "trainresync.search.help.ids": "& Item ID    %% Creative tab",
+  "item.trainresync.glowing_potion_name": "Glowing %s",
   "trainresync.paw.upper_tension_height_difference": "Upper Tension Wire height difference",
   "trainresync.paw.top_support_height_difference": "Top Support Wire height difference",
   "trainresync.paw.wire_type": "Type:",

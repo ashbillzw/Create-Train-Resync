@@ -6,11 +6,13 @@ import net.minecraft.nbt.CompoundTag;
 import net.mehvahdjukaar.amendments.common.tile.LiquidCauldronBlockTile;
 import net.mehvahdjukaar.amendments.configs.CommonConfigs;
 import net.mehvahdjukaar.moonlight.api.fluids.SoftFluidStack;
+import net.mehvahdjukaar.moonlight.api.fluids.BuiltInSoftFluids;
 import net.mehvahdjukaar.moonlight.api.fluids.SoftFluidTank;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -19,6 +21,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /** Exact accounting over Amendments' visual four-layer tank. */
 @Mixin(value = LiquidCauldronBlockTile.class, priority = 1100, remap = false)
 public abstract class MilkTankMixin implements MilkAccess {
+    @Shadow private boolean hasGlowInk;
+    @Override public void trainresync$markGlowing() { hasGlowInk = true; }
     @ModifyExpressionValue(method = "maybeSendPotionMixMessage", at = @At(value = "INVOKE", target = "Ljava/util/List;size()I"))
     private int trainresync$warnAboveMixLimit(int effects, SoftFluidTank tank, net.minecraft.world.entity.player.Player player) {
         effects = CauldronGlow.mixingCount(net.minecraft.world.item.alchemy.PotionUtils.getAllEffects(tank.getFluid().getTag()));
@@ -65,6 +69,17 @@ public abstract class MilkTankMixin implements MilkAccess {
         trainresync$type = tag.contains("sd_content") ? tag.getString("sd_content") : "milk";
         trainresync$limit = CauldronContents.shake(trainresync$type) ? Math.max(250, Math.min(16000, tag.getInt("sd_capacity"))) : 1000;
         trainresync$amount = tag.contains("sd_milk_mb") ? Math.max(0, Math.min(trainresync$limit, tag.getInt("sd_milk_mb"))) : -1;
+        trainresync$unpackStoredGlow();
+    }
+
+    @Unique private void trainresync$unpackStoredGlow() {
+        var fluid = trainresync$tank().getFluid();
+        var base = CauldronGlow.unpack(fluid);
+        if (base != fluid) {
+            hasGlowInk = true;
+            trainresync$tank().setFluid(base);
+            if (trainresync$amount >= 0) trainresync$type = CauldronContents.type(base);
+        }
     }
     @Inject(method = "m_183515_", at = @At("TAIL"))
     private void trainresync$save(CompoundTag tag, CallbackInfo ci) {
@@ -76,6 +91,7 @@ public abstract class MilkTankMixin implements MilkAccess {
     }
     @Inject(method = "m_6596_", at = @At("HEAD"))
     private void trainresync$reconcileExternalLayers(CallbackInfo ci) {
+        trainresync$unpackStoredGlow();
         if (trainresync$amount < 0) return;
         SoftFluidStack fluid = trainresync$tank().getFluid();
         if (!fluid.isEmpty() && !trainresync$type.equals(trainresync$content())) { trainresync$amount = -1; return; }
@@ -104,13 +120,17 @@ public abstract class MilkTankMixin implements MilkAccess {
         int stored = trainresync$milkAmount();
         if (stored < 0) return;
         var mapped = MappedFluids.fromForge(input);
-        if (!mapped.isEmpty() && MappedFluids.managed(CauldronContents.type(mapped))) {
-            if (CauldronPotions.different(this, mapped)) {
-                cir.setReturnValue(input.getAmount() >= 250 ? CauldronPotions.mix(this, mapped, action) : 0);
-                return;
+        var base = CauldronGlow.unpack(mapped);
+        if (CauldronPotions.different(this, base)) {
+            cir.setReturnValue(input.getAmount() >= 250 ? CauldronPotions.mix(this, mapped, action) : 0);
+            return;
+        }
+        if (base.is(BuiltInSoftFluids.WATER) || MappedFluids.managed(CauldronContents.type(base))) {
+            int accepted = stored == 0 || trainresync$tank().getFluid().isFluidEqual(base) ? MilkAmounts.fill(stored, input.getAmount()) : 0;
+            if (accepted > 0 && action.execute()) {
+                if (base != mapped) hasGlowInk = true;
+                trainresync$setMappedFluid(base, stored + accepted);
             }
-            int accepted = stored == 0 || trainresync$tank().getFluid().isFluidEqual(mapped) ? MilkAmounts.fill(stored, input.getAmount()) : 0;
-            if (accepted > 0 && action.execute()) trainresync$setMappedFluid(mapped, stored + accepted);
             cir.setReturnValue(accepted);
             return;
         }
@@ -150,9 +170,10 @@ public abstract class MilkTankMixin implements MilkAccess {
         int stored = trainresync$milkAmount();
         if (stored >= 0) {
             var mapped = MappedFluids.fromForge(input);
-            if (!mapped.isEmpty() && MappedFluids.managed(CauldronContents.type(mapped))) {
-                cir.setReturnValue(index == 0 && (stored == 0 || trainresync$tank().getFluid().isFluidEqual(mapped)
-                        || (CauldronPotions.different(this, mapped) && CauldronPotions.mix(this, mapped, FluidAction.SIMULATE) == 250)));
+            var base = CauldronGlow.unpack(mapped);
+            if (base.is(BuiltInSoftFluids.WATER) || MappedFluids.managed(CauldronContents.type(base))) {
+                cir.setReturnValue(index == 0 && (stored == 0 || trainresync$tank().getFluid().isFluidEqual(base)
+                        || (CauldronPotions.different(this, base) && CauldronPotions.mix(this, mapped, FluidAction.SIMULATE) == 250)));
                 return;
             }
             String type = CauldronContents.type(input);

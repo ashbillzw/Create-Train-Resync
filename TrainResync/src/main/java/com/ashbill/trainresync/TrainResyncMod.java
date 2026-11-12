@@ -24,6 +24,8 @@ public class TrainResyncMod {
         if (com.ashbill.trainresync.compat.cauldron.CauldronCompatibility.available()) {
             net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus()
                     .addListener(TrainResyncMod::addCauldronData);
+            net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus()
+                    .addListener(com.ashbill.trainresync.compat.cauldron.HeatSources::setupBoilerHeaters);
             net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(com.ashbill.trainresync.compat.cauldron.MilkIntegration.class);
             net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(com.ashbill.trainresync.compat.cauldron.HeatSources.class);
         }

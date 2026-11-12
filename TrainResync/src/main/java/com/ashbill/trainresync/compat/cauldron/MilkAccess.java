@@ -6,5 +6,6 @@ public interface MilkAccess {
     String trainresync$content();
     int trainresync$capacity();
     void trainresync$setContent(String content, int amount, int capacity);
+    void trainresync$markGlowing();
     void trainresync$setMappedFluid(net.mehvahdjukaar.moonlight.api.fluids.SoftFluidStack fluid, int amount);
 }

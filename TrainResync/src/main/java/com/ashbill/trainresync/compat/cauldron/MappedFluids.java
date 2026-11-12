@@ -25,8 +25,12 @@ public final class MappedFluids {
             ? "mapped:" + soft.fluidKey().location() : "";
     }
     public static FluidStack contents(MilkAccess access) {
-        if (!managed(access.trainresync$content())) return CauldronContents.fluid(access.trainresync$content(), access.trainresync$milkAmount());
-        var soft = ((LiquidCauldronBlockTile)access).getSoftFluidTank().getFluid();
+        var tile = (LiquidCauldronBlockTile)access;
+        var soft = tile.getSoftFluidTank().getFluid();
+        var type = access.trainresync$content();
+        if (!managed(type) && !(type.equals("water") && tile.isGlowing()))
+            return CauldronContents.fluid(type, access.trainresync$milkAmount());
+        if (tile.isGlowing()) soft = CauldronGlow.pack(soft);
         var result = SoftFluidStackImpl.toForgeFluid(soft.copyWithCount(1));
         result.setAmount(access.trainresync$milkAmount());
         return result;

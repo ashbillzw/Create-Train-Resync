@@ -14,6 +14,7 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.hibiscus.naturespirit.registration.NSTags;
@@ -33,29 +34,21 @@ public final class MilkIntegration {
     public static boolean plain(BlockState state) { return state.is(Blocks.CAULDRON); }
     /** -1 leaves unrelated Create open-pipe behavior alone. */
     public static int fillAt(Level world, BlockPos pos, FluidStack stack, FluidAction action) {
-        String type = CauldronContents.type(stack);
-        if (type.isEmpty()) {
+        if (world == null || !world.isLoaded(pos)) return -1;
+        if (CauldronContents.type(stack).isEmpty()) {
             var soft = MappedFluids.fromForge(stack);
             if (soft.isEmpty() || !MappedFluids.managed(CauldronContents.type(soft))) return -1;
-            if (world == null || !world.isLoaded(pos)) return -1;
-            boolean empty = plain(world.getBlockState(pos));
-            MilkAccess access = tank(world, pos);
-            if (!empty && access == null) return -1;
-            int stored = empty ? 0 : access.trainresync$milkAmount();
-            if (CauldronPotions.different(access, soft))
-                return stack.getAmount() >= 250 ? CauldronPotions.mix(access, soft, action) : 0;
-            if (stored > 0 && !MappedFluids.contents(access).isFluidEqual(stack)) return 0;
-            int accepted = MilkAmounts.fill(stored, stack.getAmount());
+        }
+        var access = tank(world, pos);
+        if (access == null) {
+            if (!plain(world.getBlockState(pos))) return -1;
+            int accepted = MilkAmounts.fill(0, stack.getAmount());
             if (accepted == 0 || action.simulate()) return accepted;
             if (world.isClientSide) return 0;
-            if (empty) {
-                access = createTank(world, pos);
-                if (access == null) return 0;
-            }
-            access.trainresync$setMappedFluid(soft, stored + accepted);
-            return accepted;
+            access = createTank(world, pos);
+            if (access == null) return 0;
         }
-        return fillContentAt(world, pos, type, stack.getAmount(), action);
+        return ((IFluidHandler)access).fill(stack, action);
     }
     public static int fillContentAt(Level world, BlockPos pos, String type, int amount, FluidAction action) {
         if (world == null || !world.isLoaded(pos)) return -1;
@@ -91,7 +84,9 @@ public final class MilkIntegration {
             case "minecraft:lava_bucket" -> "lava";
             case "minecraft:potion" -> stack.getTag() != null
                 && "minecraft:water".equals(stack.getTag().getString("Potion"))
-                && !stack.getTag().contains("CustomPotionEffects") ? "water" : "";
+                && (!stack.getTag().contains("CustomPotionEffects")
+                    || net.minecraft.world.item.alchemy.PotionUtils.getCustomEffects(stack).stream()
+                        .allMatch(e -> e.getEffect() == net.minecraft.world.effect.MobEffects.GLOWING)) ? "water" : "";
             default -> "";
         };
     }
@@ -131,17 +126,14 @@ public final class MilkIntegration {
             return;
         }
         String id = String.valueOf(ForgeRegistries.ITEMS.getKey(held.getItem()));
-        String input = inputType(id, held);
-        String type = empty ? "" : access.trainresync$content();
-        int stored = empty ? 0 : access.trainresync$milkAmount();
-        int amount = CauldronContainers.containerAmount(id, input);
-        boolean cheese = type.equals("milk") && held.is(NSTags.Items.CHEESE_MAKER);
+        var transfer = CauldronContainers.prepare(id, held, empty ? null : access);
+        boolean cheese = transfer.type().equals("milk") && held.is(NSTags.Items.CHEESE_MAKER);
         String flavor = "";
         for (String candidate : CauldronContents.FLAVORS) {
             if (id.equals(CauldronContents.iceCreamId(candidate))) flavor = candidate;
         }
-        boolean shake = type.equals("milk") && !flavor.isEmpty();
-        if (amount == 0 && !cheese && !shake) {
+        boolean shake = transfer.type().equals("milk") && !flavor.isEmpty();
+        if (transfer.amount() == 0 && !cheese && !shake) {
             InteractionResult result = WaterInteractions.interact(event, access);
             if (result != InteractionResult.PASS) {
                 event.setCanceled(true);
@@ -152,7 +144,7 @@ public final class MilkIntegration {
         event.setCanceled(true);
         event.setCancellationResult(InteractionResult.FAIL);
         if (cheese || shake) {
-            if (stored != 1000) return;
+            if (transfer.stored() != 1000) return;
             if (!world.isClientSide) {
                 ItemStack remainder = MilkConversions.apply(world, pos, held);
                 if (remainder == null) return;
@@ -162,9 +154,9 @@ public final class MilkIntegration {
                 world.gameEvent(event.getEntity(), GameEvent.BLOCK_CHANGE, pos);
             }
         } else {
-            if (!CauldronContainers.canTransfer(input, type, stored, amount)) return;
+            if (!transfer.fits()) return;
             if (!world.isClientSide) {
-                ItemStack result = CauldronContainers.transfer(world, pos, held, event.getEntity());
+                ItemStack result = transfer.execute(world, pos, held, event.getEntity(), access);
                 if (result == null) return;
                 event.getEntity().setItemInHand(event.getHand(), ItemUtils.createFilledResult(held, event.getEntity(), result));
             }

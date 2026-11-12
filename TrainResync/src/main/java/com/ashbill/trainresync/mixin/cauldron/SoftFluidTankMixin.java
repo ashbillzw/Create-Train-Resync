@@ -2,6 +2,11 @@ package com.ashbill.trainresync.mixin.cauldron;
 
 import com.ashbill.trainresync.compat.cauldron.PotionMixingAccess;
 import com.ashbill.trainresync.compat.cauldron.CauldronGlow;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.mojang.datafixers.util.Pair;
+import net.mehvahdjukaar.moonlight.api.fluids.FluidContainerList;
+import net.mehvahdjukaar.moonlight.api.util.PotionNBTHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.mehvahdjukaar.amendments.common.tile.LiquidCauldronBlockTile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -17,11 +22,28 @@ import net.minecraft.world.item.alchemy.PotionUtils;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
 
 @Mixin(value = SoftFluidTank.class, remap = false)
 public abstract class SoftFluidTankMixin implements PotionMixingAccess {
     @Shadow public abstract SoftFluidStack getFluid();
     @Unique private PotionMixingAccess.Mix trainresync$pendingMix;
+
+    // Moonlight maps plain water from every potion bottle to WATER, losing the bottle type.
+    @ModifyExpressionValue(method = "drainItem(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ZZ)Lnet/minecraft/world/InteractionResultHolder;",
+            at = @At(value = "INVOKE", target = "Lnet/mehvahdjukaar/moonlight/api/fluids/SoftFluidStack;fromItem(Lnet/minecraft/world/item/ItemStack;)Lcom/mojang/datafixers/util/Pair;"))
+    private Pair<SoftFluidStack, FluidContainerList.Category> trainresync$dilutionBottleType(
+            Pair<SoftFluidStack, FluidContainerList.Category> mapped, ItemStack held, Level world, BlockPos pos) {
+        if (mapped == null || !mapped.getFirst().is(BuiltInSoftFluids.WATER) || !getFluid().is(BuiltInSoftFluids.POTION)
+                || pos == null || !(world.getBlockEntity(pos) instanceof LiquidCauldronBlockTile tile)
+                || tile.getSoftFluidTank() != (Object)this) return mapped;
+        var type = PotionNBTHelper.getPotionType(held.getItem());
+        if (type == null || type == PotionNBTHelper.Type.REGULAR) return mapped;
+        var tag = new CompoundTag();
+        tag.putString("Potion", "minecraft:water");
+        type.applyToTag(tag);
+        return Pair.of(SoftFluidStack.of(BuiltInSoftFluids.POTION, mapped.getFirst().getCount(), tag), mapped.getSecond());
+    }
 
     @Override public PotionMixingAccess.Mix trainresync$takePotionMix() {
         var previous = trainresync$pendingMix;

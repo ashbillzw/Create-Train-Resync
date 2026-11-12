@@ -8,10 +8,11 @@ import net.minecraft.world.item.Items;
 import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
 
 public final class CauldronPotions {
-    public static boolean different(MilkAccess access, SoftFluidStack input) {
-        if (access == null || access.trainresync$milkAmount() <= 0 || !input.is(BuiltInSoftFluids.POTION)) return false;
+    public static boolean different(MilkAccess access, SoftFluidStack base) {
+        if (access.trainresync$milkAmount() <= 0) return false;
         var stored = ((LiquidCauldronBlockTile)access).getSoftFluidTank().getFluid();
-        return stored.is(BuiltInSoftFluids.POTION) && !stored.isFluidEqual(input);
+        if (!stored.is(BuiltInSoftFluids.POTION)) return false;
+        return base.is(BuiltInSoftFluids.WATER) || (base.is(BuiltInSoftFluids.POTION) && !stored.isFluidEqual(base));
     }
 
     /** One bottle's native transfer, without a player or an inventory transaction. */

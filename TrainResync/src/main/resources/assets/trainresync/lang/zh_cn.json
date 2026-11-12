@@ -1,4 +1,8 @@
 {
+  "trainresync.search.help.mods": "@ 模组名　# 物品提示",
+  "trainresync.search.help.tags": "$ 标签　^ 颜色",
+  "trainresync.search.help.ids": "& 物品 ID　%% 创造栏分类",
+  "item.trainresync.glowing_potion_name": "发光%s",
   "trainresync.paw.upper_tension_height_difference": "上部张力线高度差",
   "trainresync.paw.top_support_height_difference": "顶部支撑线高度差",
   "trainresync.paw.wire_type": "类型：",
