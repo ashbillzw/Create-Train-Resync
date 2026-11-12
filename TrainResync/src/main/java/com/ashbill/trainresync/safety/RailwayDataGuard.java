@@ -45,9 +45,7 @@ public final class RailwayDataGuard {
         if (!ModList.get().isLoaded("create")) return;
         MinecraftServer server = event.getServer();
         Path target = target(server);
-        ENABLED.remove(target);
-        NEW_WORLDS.remove(target);
-        BLOCKED.remove(target);
+        clearWorldState(target);
         Path configPath = FMLPaths.CONFIGDIR.get().resolve("trainresync.json");
         TrainResyncConfig config;
         try {
@@ -86,7 +84,10 @@ public final class RailwayDataGuard {
 
     @SubscribeEvent
     public static void afterServerStop(ServerStoppedEvent event) {
-        Path target = target(event.getServer());
+        clearWorldState(target(event.getServer()));
+    }
+
+    private static void clearWorldState(Path target) {
         ENABLED.remove(target);
         NEW_WORLDS.remove(target);
         BLOCKED.remove(target);

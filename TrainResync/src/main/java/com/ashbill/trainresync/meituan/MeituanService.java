@@ -166,15 +166,7 @@ public final class MeituanService {
     }
 
     private void request(ServerPlayer player) {
-        BlockPos origin = player.blockPosition();
-        BlockPos chosen = available(origin) ? origin : null;
-        for (int dy = 0; chosen == null && dy <= 1; dy++)
-            for (int dx = -1; chosen == null && dx <= 1; dx++)
-                for (int dz = -1; chosen == null && dz <= 1; dz++) {
-                    if (dy == 0 && dx == 0 && dz == 0) continue;
-                    BlockPos candidate = origin.offset(dx, dy, dz);
-                    if (available(candidate)) chosen = candidate;
-                }
+        BlockPos chosen = findDeliverySpace(player.blockPosition());
         if (chosen == null) { message(player, "外卖箱放置空间不足！"); return; }
         Point point = new Point(chosen.getX(), chosen.getY(), chosen.getZ());
         boolean fresh = !book.requests.containsKey(player.getUUID());
@@ -185,6 +177,18 @@ public final class MeituanService {
                         net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, "/meituan quxiaodiancan")));
         player.sendSystemMessage(cancel);
         if (fresh) broadcast(player);
+    }
+
+    private BlockPos findDeliverySpace(BlockPos origin) {
+        if (available(origin)) return origin;
+        for (int dy = 0; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (dy == 0 && dx == 0 && dz == 0) continue;
+                    BlockPos candidate = origin.offset(dx, dy, dz);
+                    if (available(candidate)) return candidate;
+                }
+        return null;
     }
 
     private boolean available(BlockPos point) {
