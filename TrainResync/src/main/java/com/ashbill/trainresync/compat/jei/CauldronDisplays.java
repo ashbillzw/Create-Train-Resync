@@ -19,7 +19,6 @@ import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.registration.IRecipeRegistration;
 import net.hibiscus.naturespirit.registration.NSTags;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.alchemy.Potions;
@@ -276,16 +275,6 @@ public final class CauldronDisplays {
                     var lookup = b.addInvisibleIngredients(RecipeIngredientRole.OUTPUT).addItemStacks(aliases);
                     b.createFocusLink(row.liquid, row.result, lookup);
                 }
-                row.result.addTooltipCallback((view, lines) -> view.getDisplayedItemStack().ifPresent(stack -> {
-                    var vanilla = new ArrayList<Component>();
-                    var full = new ArrayList<Component>();
-                    PotionUtils.addPotionTooltip(stack, vanilla, 0.125F);
-                    PotionUtils.addPotionTooltip(stack, full, 1F);
-                    for (int i = 0; i < vanilla.size() && i < full.size(); i++) {
-                        int pos = lines.indexOf(vanilla.get(i));
-                        if (pos >= 0) lines.set(pos, full.get(i));
-                    }
-                }));
             });
         }
     }

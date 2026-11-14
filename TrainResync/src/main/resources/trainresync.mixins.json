@@ -76,6 +76,7 @@
     "search.modernfix.CreativeSearchPrefixMixin",
     "search.JeiSearchFieldAccessor",
     "cauldron.LiquidCauldronParticlesMixin",
+    "cauldron.TippedArrowItemMixin",
     "cauldron.jei.FruitCauldronCategoryMixin",
     "trainlights.LightBlockChangeMixin",
     "mcef.MCEFDownloaderMixin",
