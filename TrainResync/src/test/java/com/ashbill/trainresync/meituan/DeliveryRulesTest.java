@@ -17,7 +17,7 @@ public final class DeliveryRulesTest {
         if (!ok) throw new AssertionError(name);
     }
     private static BigDecimal decimal(String value) { return new BigDecimal(value); }
-    private static Menu simpleMenu() { return new Menu(List.of(new Line("test:pie", 3, decimal("16"), Map.of())), BigDecimal.ONE); }
+    private static Menu simpleMenu() { return new Menu(List.of(new Line("test:pie", 3, decimal("16"), Map.of(), false)), BigDecimal.ONE); }
     private static Order animal(Point point, long expiry) { return new Order(UUID.randomUUID(), null, "绵羊-0001", point, simpleMenu(), expiry); }
     private static void fill(DeliveryBook book, UUID viewer, long expiry) {
         while (book.courier(viewer).animals.size() < 5) book.addAnimal(viewer, animal(new Point(20, 70, 20), expiry));
@@ -82,21 +82,111 @@ public final class DeliveryRulesTest {
         check(empty.preview(viewer, 0, 0, now, config, random).rows().isEmpty(), "zero player orders plus N7 produces zero rows");
         check(empty.courier(viewer).animals.size() == 5, "invisible animals remain in pool");
 
-        Menu priced = new Menu(List.of(new Line("test:a", 1, decimal("0.7"), Map.of()),
-                new Line("test:b", 1, decimal("0.7"), Map.of("新品", decimal("1.5")))), decimal("1.5"));
+        Menu priced = new Menu(List.of(new Line("test:a", 1, decimal("0.7"), Map.of(), false),
+                new Line("test:b", 1, decimal("0.7"), Map.of("新品", decimal("1.5")), false)), decimal("1.5"));
         Order special = new Order(UUID.randomUUID(), owner, "Owner", new Point(900, 60, 0), priced, Long.MAX_VALUE);
         Quote quote = quote(special, 0, 0, config);
         check(quote.subtotal().equals(decimal("1.75")) && quote.reward() == 5, "item-specific fixed bonuses and final-only floor");
         check(quote(animal(new Point(0, 1000, 0), now), 0.5, 0.5, config).distance() == 0, "list ignores Y");
         check(new Point(0, 1000, 0).squaredDistance(0.5, 0, 0.5) == 1_000_000, "delivery includes Y");
+        MeituanConfig pay = new MeituanConfig();
+        pay.basePriceMultiplier = decimal("1.23");
+        pay.foods.values().forEach(food -> food.price = decimal("8"));
+        Menu sample = menu(pay, new Random(42));
+        check(sample.lines().stream().allMatch(line -> line.unitPrice().equals(decimal("9.84"))), "snapshot adjusted unit prices once");
+        pay.deliveryBaseRate = decimal("8");
+        Menu twoKinds = new Menu(List.of(new Line("test:pie", 3, decimal("9.84"), Map.of(), false),
+                new Line("test:slice", 8, decimal("2.46"), Map.of("new", decimal("1.5")), false)), BigDecimal.ONE);
+        Order delivery = new Order(UUID.randomUUID(), null, "test", new Point(900, 60, 0), twoKinds, Long.MAX_VALUE);
+        Quote withPay = quote(delivery, 0, 0, pay);
+        check(withPay.base().compareTo(decimal("73.20")) == 0 && withPay.subtotal().compareTo(decimal("83.04")) == 0
+                && withPay.reward() == 124, "two kinds add 24 once before far bonus and outside food bonuses");
+        MeituanConfig event = new MeituanConfig();
+        Point near = new Point(0, 60, 0);
+        Menu normal = new Menu(List.of(new Line("test:pie", 3, decimal("12"), Map.of(), false)), BigDecimal.ONE);
+        Order regular = new Order(UUID.randomUUID(), null, "test", near, normal, Long.MAX_VALUE);
+        check(quote(regular, 0, 0, event).reward() == 36, "event disabled by default");
+        event.eventActive = true;
+        Quote eventOnly = quote(regular, 0, 0, event);
+        check(eventOnly.reward() == 72 && !eventOnly.highlighted(), "event doubles payout without highlighting");
+        for (String hot : List.of("1.99", "2.00")) {
+            Order hotOrder = new Order(regular.id(), null, "test", near, new Menu(normal.lines(), decimal(hot)), Long.MAX_VALUE);
+            check(quote(hotOrder, 0, 0, event).highlighted() == hot.equals("2.00"), "inclusive non-event threshold " + hot);
+        }
         config.hotProbability = 1;
         config.foods.values().forEach(food -> food.quantityMultiplier = 4);
         for (int i = 0; i < 500; i++) {
             Menu menu = menu(config, random);
-            check(menu.hot().compareTo(decimal("1.5")) >= 0 && menu.hot().compareTo(decimal("2.0")) <= 0 && menu.hot().scale() == 2, "hot bounds/precision");
+            check(menu.hot().compareTo(decimal("1.5")) >= 0 && menu.hot().compareTo(decimal("2.50")) <= 0 && menu.hot().scale() == 2, "hot bounds/precision");
             check(menu.lines().size() >= 1 && menu.lines().size() <= 3 && menu.lines().stream().map(Line::item).distinct().count() == menu.lines().size(), "distinct food types");
             for (Line line : menu.lines()) check(line.count() >= 12 && line.count() <= 28 && line.count() % 4 == 0, "quantity multiplier");
         }
+        MeituanConfig pool = new MeituanConfig();
+        String favorite = pool.foods.keySet().iterator().next();
+        pool.foods.get(favorite).preferred = true;
+        Random poolRandom = new Random(12345);
+        int preferredFirst = 0;
+        for (int i = 0; i < 4000; i++) {
+            Menu draw = menu(pool, poolRandom);
+            if (draw.lines().get(0).item().equals(favorite)) preferredFirst++;
+            check(draw.lines().stream().map(Line::item).distinct().count() == draw.lines().size(), "no repeated pool picks");
+        }
+        check(preferredFirst > 1860 && preferredFirst < 2140, "equal pool odds despite different pool sizes");
+        for (int chance : List.of(0, 1)) {
+            pool.preferredPoolChance = chance;
+            for (int i = 0; i < 50; i++)
+                check(menu(pool, poolRandom).lines().get(0).item().equals(favorite) == (chance == 1), "configurable pool chance");
+        }
+        pool.foods.get(favorite).sideDish = true;
+        for (int i = 0; i < 50; i++)
+            check(menu(pool, poolRandom).lines().stream().anyMatch(line -> !line.item().equals(favorite)), "preferred side cannot fill whole order");
+        pool.foods.values().forEach(food -> { food.preferred = true; food.sideDish = false; });
+        pool.preferredPoolChance = 0;
+        check(!menu(pool, poolRandom).lines().isEmpty(), "empty ordinary pool falls back to preferred");
+        MeituanConfig pranks = new MeituanConfig();
+        for (int i = 0; i < 3; i++) {
+            var prop = new MeituanConfig.Food();
+            prop.prank = true;
+            pranks.foods.put("test:prank_" + i, prop);
+        }
+        int rolls = 0, hits = 0;
+        for (int i = 0; i < 25000; i++) {
+            var lines = menu(pranks, poolRandom).lines();
+            rolls += lines.size();
+            hits += (int) lines.stream().filter(Line::prank).count();
+        }
+        check(hits > rolls * 0.0005 && hits < rolls * 0.0015, "per-item prank probability");
+        pranks.prankItemChance = 1;
+        pranks.preferredPoolChance = 1;
+        pranks.foods.get("farmersdelight:apple_pie").preferred = true;
+        check(menu(pranks, poolRandom).lines().stream().allMatch(Line::prank), "prank pool checked first");
+        pranks.prankItemChance = 0;
+        check(menu(pranks, poolRandom).lines().stream().noneMatch(Line::prank), "pranks never leak into the food pools");
+        MeituanConfig mixed = new MeituanConfig();
+        mixed.foods.put("test:side", new MeituanConfig.Food());
+        MeituanConfig original = new Gson().fromJson(new Gson().toJson(mixed), MeituanConfig.class);
+        String mainFood = mixed.foods.keySet().iterator().next();
+        mixed.foods.forEach((id, food) -> food.sideDish = !id.equals(mainFood));
+        boolean[] replaced = new boolean[4];
+        Random seeds = new Random(7715);
+        for (int trial = 0; trial < 300; trial++) {
+            long seed = seeds.nextLong();
+            Menu first = menu(original, new Random(seed)), actual = menu(mixed, new Random(seed));
+            int size = first.lines().size();
+            if (first.lines().stream().anyMatch(line -> line.item().equals(mainFood))) {
+                check(actual.equals(first), "keep menu with a main dish");
+            } else {
+                replaced[size] = true;
+                check(actual.lines().size() == size && actual.lines().get(size - 1).item().equals(mainFood)
+                        && actual.lines().subList(0, size - 1).equals(first.lines().subList(0, size - 1)),
+                        "only replace last side dish");
+            }
+        }
+        check(replaced[1] && replaced[2] && replaced[3], "reroll covered at all menu sizes");
+        mixed.foods.get(mainFood).sideDish = true;
+        boolean allSidesRejected = false;
+        try { mixed.validate(); } catch (IllegalArgumentException expected) { allSidesRejected = true; }
+        check(allSidesRejected, "reject impossible all-side pool at configuration load");
         var stock = List.of(new DeliveryInventory.Stock("a", 2, true), new DeliveryInventory.Stock("a", 64, false),
                 new DeliveryInventory.Stock("a", 3, true), new DeliveryInventory.Stock("b", 2, true));
         check(DeliveryInventory.plan(stock, Map.of("a", 6, "b", 1)) == null, "NBT-altered stock excluded; insufficient total removes nothing");

@@ -28,7 +28,7 @@ public final class DeliveryBook {
         }
     }
     public record Request(UUID id, UUID owner, String name, Point point) {}
-    public record Line(String item, int count, BigDecimal unitPrice, Map<String, BigDecimal> bonuses) {
+    public record Line(String item, int count, BigDecimal unitPrice, Map<String, BigDecimal> bonuses, boolean prank) {
         public BigDecimal base() { return unitPrice.multiply(BigDecimal.valueOf(count)); }
         public BigDecimal subtotal() {
             BigDecimal value = base();
@@ -40,7 +40,11 @@ public final class DeliveryBook {
     public record Order(UUID id, UUID owner, String name, Point point, Menu menu, long expiresAt) {}
     public record Active(Order order, long reward, long deadline) {}
     public record Quote(Order order, boolean far, double distance, BigDecimal base, BigDecimal subtotal,
-                        BigDecimal orderMultiplier, long reward) {}
+                        BigDecimal orderMultiplier, long reward) {
+        public boolean highlighted() {
+            return subtotal.multiply(orderMultiplier).compareTo(base.multiply(BigDecimal.valueOf(2))) >= 0;
+        }
+    }
     public record Preview(long players, long animals, List<Quote> rows) {}
 
     public static final class Courier {
@@ -131,12 +135,30 @@ public final class DeliveryBook {
     public static Menu menu(MeituanConfig config, Random random) {
         List<String> choices = new ArrayList<>(config.foods.keySet());
         java.util.Collections.shuffle(choices, random);
-        int kinds = 1 + random.nextInt(Math.min(3, choices.size()));
-        List<Line> lines = new ArrayList<>();
-        for (String id : choices.subList(0, kinds)) {
+        List<String> preferred = new ArrayList<>(), regular = new ArrayList<>();
+        List<String> pranks = new ArrayList<>();
+        for (String id : choices) {
             MeituanConfig.Food food = config.foods.get(id);
-            lines.add(new Line(id, (3 + random.nextInt(5)) * food.quantityMultiplier, food.price,
-                    new LinkedHashMap<>(food.bonuses)));
+            if (food.prank) pranks.add(id);
+            else (food.preferred ? preferred : regular).add(id);
+        }
+        int kinds = 1 + random.nextInt(Math.min(3, preferred.size() + regular.size()));
+        List<String> selected = new ArrayList<>(kinds);
+        for (int i = 0; i < kinds; i++) {
+            if (!pranks.isEmpty() && random.nextDouble() < config.prankItemChance)
+                selected.add(pranks.remove(pranks.size() - 1));
+            else selected.add(drawFood(preferred, regular, config.preferredPoolChance, random));
+        }
+        if (selected.stream().allMatch(id -> config.foods.get(id).sideDish)) {
+            preferred.removeIf(id -> config.foods.get(id).sideDish);
+            regular.removeIf(id -> config.foods.get(id).sideDish);
+            selected.set(kinds - 1, drawFood(preferred, regular, config.preferredPoolChance, random));
+        }
+        List<Line> lines = new ArrayList<>();
+        for (String id : selected) {
+            MeituanConfig.Food food = config.foods.get(id);
+            lines.add(new Line(id, (3 + random.nextInt(5)) * food.quantityMultiplier, food.price.multiply(config.basePriceMultiplier),
+                    new LinkedHashMap<>(food.bonuses), food.prank));
         }
         BigDecimal hot = BigDecimal.ONE;
         if (random.nextDouble() < config.hotProbability)
@@ -144,15 +166,25 @@ public final class DeliveryBook {
         return new Menu(List.copyOf(lines), hot);
     }
 
+    private static String drawFood(List<String> preferred, List<String> regular, double chance, Random random) {
+        boolean usePreferred = regular.isEmpty() || (!preferred.isEmpty() && random.nextDouble() < chance);
+        List<String> pool = usePreferred ? preferred : regular;
+        return pool.remove(pool.size() - 1); // Each pool is already shuffled.
+    }
+
     public static Quote quote(Order order, double x, double z, MeituanConfig config) {
-        BigDecimal base = BigDecimal.ZERO, subtotal = BigDecimal.ZERO;
+        BigDecimal deliveryPay = config.deliveryBaseRate.multiply(BigDecimal.valueOf(order.menu().lines().size() + 1L));
+        BigDecimal base = deliveryPay, subtotal = deliveryPay;
         for (Line line : order.menu().lines()) { base = base.add(line.base()); subtotal = subtotal.add(line.subtotal()); }
         double distance = order.point().horizontal(x, z);
         boolean far = distance > config.farStart;
         BigDecimal multiplier = order.menu().hot();
         if (order.owner() != null) multiplier = multiplier.multiply(config.playerMultiplier);
         if (far) multiplier = multiplier.multiply(config.farMultiplier);
-        long reward = subtotal.multiply(multiplier).setScale(0, RoundingMode.FLOOR).longValueExact();
+        // The event affects payment only; orderMultiplier also drives bonus highlighting.
+        BigDecimal payout = subtotal.multiply(multiplier);
+        if (config.eventActive) payout = payout.multiply(MeituanConfig.EVENT_MULTIPLIER);
+        long reward = payout.setScale(0, RoundingMode.FLOOR).longValueExact();
         if (reward < 0 || reward > 1_000_000_000L) throw new IllegalArgumentException("Order reward exceeds safe payout limit");
         return new Quote(order, far, distance, base, subtotal, multiplier, reward);
     }

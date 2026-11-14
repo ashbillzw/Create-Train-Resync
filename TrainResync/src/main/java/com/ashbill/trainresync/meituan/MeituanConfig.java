@@ -19,12 +19,18 @@ public final class MeituanConfig {
     public int nearRadius = 500;
     public int farStart = 500;
     public int farEnd = 1000;
+    public double prankItemChance = 0.001;
+    public double preferredPoolChance = 0.5;
     public double farProbability = 0.25;
+    public BigDecimal basePriceMultiplier = new BigDecimal("1.5");
+    public boolean eventActive;
+    public static final BigDecimal EVENT_MULTIPLIER = BigDecimal.valueOf(2);
+    public BigDecimal deliveryBaseRate = BigDecimal.ZERO;
     public BigDecimal playerMultiplier = new BigDecimal("1.5");
     public BigDecimal farMultiplier = new BigDecimal("1.5");
-    public double hotProbability = 0.05;
+    public double hotProbability = 0.10;
     public int hotMinHundredths = 150;
-    public int hotMaxHundredths = 200;
+    public int hotMaxHundredths = 250;
     public int deliveryRadius = 10;
     public int deliveryTimeoutSeconds = 12000;
     public int animalMinSeconds = 300;
@@ -41,6 +47,9 @@ public final class MeituanConfig {
 
     public static final class Food {
         @SerializedName("价格") public BigDecimal price = new BigDecimal("16");
+        @SerializedName("整蛊") public boolean prank;
+        @SerializedName("好") public boolean preferred;
+        @SerializedName("副餐品") public boolean sideDish;
         @SerializedName("数量乘数") public int quantityMultiplier = 1;
         @SerializedName("加成") public Map<String, BigDecimal> bonuses = new LinkedHashMap<>();
     }
@@ -61,7 +70,11 @@ public final class MeituanConfig {
 
     public void validate() {
         require(nearRadius > 0 && farStart >= nearRadius && farEnd > farStart && farEnd <= 100000, "radii");
+        require(probability(prankItemChance), "prank item chance");
+        require(probability(preferredPoolChance), "preferred pool chance");
         require(probability(farProbability) && probability(hotProbability), "probabilities");
+        require(positive(basePriceMultiplier), "base price multiplier");
+        require(deliveryBaseRate != null && deliveryBaseRate.signum() >= 0 && deliveryBaseRate.compareTo(BigDecimal.valueOf(1_000_000)) <= 0, "delivery base rate");
         require(positive(playerMultiplier) && positive(farMultiplier), "order multipliers");
         require(hotMinHundredths >= 100 && hotMaxHundredths >= hotMinHundredths && hotMaxHundredths <= 10000, "hot range");
         require(deliveryRadius > 0 && deliveryRadius <= 1000 && deliveryTimeoutSeconds > 0, "delivery limits");
@@ -74,6 +87,7 @@ public final class MeituanConfig {
             require(food.bonuses != null, "food bonuses");
             food.bonuses.forEach((name, value) -> require(name != null && !name.isBlank() && positive(value), "food bonus"));
         });
+        require(foods.values().stream().anyMatch(food -> !food.sideDish && !food.prank), "foods must include a non-side dish");
     }
 
     private static boolean probability(double value) { return Double.isFinite(value) && value >= 0 && value <= 1; }

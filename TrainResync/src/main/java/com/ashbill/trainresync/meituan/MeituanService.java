@@ -30,6 +30,7 @@ import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -268,10 +269,11 @@ public final class MeituanService {
             if (order.menu().hot().compareTo(BigDecimal.ONE) != 0) row.append(" ×" + number(order.menu().hot()) + "火爆");
             if (quote.far()) row.append(" ×" + number(config.farMultiplier) + "远单");
             if (order.owner() != null) row.append(" ×" + number(config.playerMultiplier) + "玩家单");
+            if (config.eventActive) row.append(" ×" + number(MeituanConfig.EVENT_MULTIPLIER) + "活动期间");
             MutableComponent reward = Component.literal(" → " + quote.reward() + "元");
-            if (quote.subtotal().multiply(quote.orderMultiplier()).compareTo(quote.base().multiply(BigDecimal.valueOf(2))) > 0)
+            if (quote.highlighted())
                 reward.withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
-            row.append(reward).append(" | ").append(contents(order.menu(), true))
+            row.append(reward).append(" | ").append(previewContents(order.menu()))
                     .append(" | " + Math.round(quote.distance()) + "米");
             String command = "/meituan jiedan " + (i + 1);
             row.withStyle(style -> style.withClickEvent(new net.minecraft.network.chat.ClickEvent(
@@ -280,12 +282,17 @@ public final class MeituanService {
         }
     }
 
-    private static MutableComponent contents(Menu menu, boolean bonuses) {
+    private static Component orderItemName(Line line) {
+        Component name = new ItemStack(item(line.item())).getHoverName();
+        return line.prank() ? name.copy().withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD) : name;
+    }
+
+    private static MutableComponent previewContents(Menu menu) {
         MutableComponent text = Component.empty();
         for (Line line : menu.lines()) {
             if (!text.getString().isEmpty()) text.append(" ");
-            text.append(new ItemStack(item(line.item())).getHoverName()).append(" ×" + line.count());
-            if (bonuses) line.bonuses().forEach((name, value) -> {
+            text.append(orderItemName(line)).append(" ×" + line.count());
+            line.bonuses().forEach((name, value) -> {
                 if (value.compareTo(BigDecimal.ONE) != 0) text.append("（" + name + "×" + number(value) + "）");
             });
         }
@@ -293,8 +300,19 @@ public final class MeituanService {
     }
 
     private static void activeMessage(ServerPlayer player, String prefix, Active active) {
-        player.sendSystemMessage(Component.literal(PREFIX + prefix + "餐品 ").append(contents(active.order().menu(), false))
-                .append("，定位 " + xyz(active.order().point())));
+        MutableComponent details = Component.literal(PREFIX + prefix + "定位 " + xyz(active.order().point()));
+        for (Line line : active.order().menu().lines()) {
+            String namespace = new ResourceLocation(line.item()).getNamespace();
+            details.append("\n");
+            if (!namespace.equals("minecraft")) {
+                String modName = ModList.get().getModContainerById(namespace)
+                        .map(mod -> mod.getModInfo().getDisplayName()).orElse(namespace);
+                details.append(Component.translatableWithFallback("trainresync.meituan.mod." + namespace, modName)).append("：");
+            }
+            details.append(orderItemName(line))
+                    .append("（" + line.item() + "）×" + line.count());
+        }
+        player.sendSystemMessage(details);
     }
 
     private void deliver(ServerPlayer player) {
