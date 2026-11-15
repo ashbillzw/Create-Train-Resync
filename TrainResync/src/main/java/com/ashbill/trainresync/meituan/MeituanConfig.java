@@ -13,7 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** The meituan section of the existing, shared trainresync.json. */
+/** Delivery settings; older installations store these under a meituan key. */
 public final class MeituanConfig {
     public boolean enabled;
     public int nearRadius = 500;
@@ -58,8 +58,11 @@ public final class MeituanConfig {
         if (!Files.exists(path)) return new MeituanConfig();
         try (Reader reader = Files.newBufferedReader(path)) {
             JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
-            if (!root.has("meituan")) return new MeituanConfig();
-            MeituanConfig config = new Gson().fromJson(root.get("meituan"), MeituanConfig.class);
+            if (!path.getFileName().toString().equals("meituan.json")) {
+                if (!root.has("meituan")) return new MeituanConfig();
+                root = root.getAsJsonObject("meituan");
+            }
+            MeituanConfig config = new Gson().fromJson(root, MeituanConfig.class);
             if (config == null) throw new IllegalArgumentException("meituan must be an object");
             config.validate();
             return config;

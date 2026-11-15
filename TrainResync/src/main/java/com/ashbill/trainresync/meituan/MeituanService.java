@@ -1,5 +1,6 @@
 package com.ashbill.trainresync.meituan;
 
+import com.ashbill.trainresync.config.TrainResyncConfig;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.datafixers.util.Either;
 import com.mojang.logging.LogUtils;
@@ -86,7 +87,7 @@ public final class MeituanService {
 
     @SubscribeEvent public static void start(ServerStartedEvent event) {
         try {
-            MeituanConfig config = MeituanConfig.load(FMLPaths.CONFIGDIR.get().resolve("trainresync.json"));
+            MeituanConfig config = MeituanConfig.load(TrainResyncConfig.file(FMLPaths.CONFIGDIR.get(), "meituan.json"));
             if (config.enabled) SERVICES.put(event.getServer(), new MeituanService(event.getServer(), config));
         } catch (Exception error) { LOGGER.error("Meituan disabled: configuration, required items or saved data unavailable", error); }
     }
@@ -105,13 +106,19 @@ public final class MeituanService {
     }
 
     @SubscribeEvent public static void commands(RegisterCommandsEvent event) {
-        event.getDispatcher().register(Commands.literal("meituan")
+        registerCommands(event, "meituan", "diancan", "quxiaodiancan", "jiedan", "songda");
+        registerCommands(event, "美团", "点餐", "取消点餐", "接单", "送达");
+        registerCommands(event, "niijima-delivery", "order", "cancel", "accept", "deliver");
+    }
+
+    private static void registerCommands(RegisterCommandsEvent event, String root, String order, String cancel, String accept, String deliver) {
+        event.getDispatcher().register(Commands.literal(root)
                 .requires(source -> SERVICES.containsKey(source.getServer()))
                 .executes(context -> run(context.getSource(), "jiedan", null))
-                .then(Commands.literal("diancan").executes(context -> run(context.getSource(), "diancan", null)))
-                .then(Commands.literal("quxiaodiancan").executes(context -> run(context.getSource(), "quxiaodiancan", null)))
-                .then(Commands.literal("songda").executes(context -> run(context.getSource(), "songda", null)))
-                .then(Commands.literal("jiedan").executes(context -> run(context.getSource(), "jiedan", null))
+                .then(Commands.literal(order).executes(context -> run(context.getSource(), "diancan", null)))
+                .then(Commands.literal(cancel).executes(context -> run(context.getSource(), "quxiaodiancan", null)))
+                .then(Commands.literal(deliver).executes(context -> run(context.getSource(), "songda", null)))
+                .then(Commands.literal(accept).executes(context -> run(context.getSource(), "jiedan", null))
                         .then(Commands.argument("id", StringArgumentType.greedyString())
                                 .executes(context -> run(context.getSource(), "jiedan", StringArgumentType.getString(context, "id"))))));
     }

@@ -46,7 +46,7 @@ public final class RailwayDataGuard {
         MinecraftServer server = event.getServer();
         Path target = target(server);
         clearWorldState(target);
-        Path configPath = FMLPaths.CONFIGDIR.get().resolve("trainresync.json");
+        Path configPath = TrainResyncConfig.file(FMLPaths.CONFIGDIR.get(), "trainresync.json");
         TrainResyncConfig config;
         try {
             config = TrainResyncConfig.load(configPath);
