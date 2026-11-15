@@ -67,6 +67,7 @@
     "trainlights.InteriorLightMovementBehaviourMixin",
     "trainlights.LightMovingInteractionMixin",
     "vanilla.EntityMixin",
+    "vanilla.GameModeCommandMixin",
     "vanilla.LeashableTagMixin",
     "vanilla.ServerGamePacketListenerImplMixin"
   ],
