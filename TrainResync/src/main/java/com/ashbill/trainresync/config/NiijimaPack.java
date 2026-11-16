@@ -19,9 +19,8 @@ public final class NiijimaPack {
         if (!Files.isRegularFile(marker)) return false;
         try (var reader = Files.newBufferedReader(marker)) {
             var json = JsonParser.parseReader(reader).getAsJsonObject();
-            var token = json.getAsJsonPrimitive("token");
             var id = json.getAsJsonPrimitive("pack-id");
-            if (token == null || !token.isNumber() || token.getAsDouble() != 114514 || id == null || !id.isString()) return false;
+            if (id == null || !id.isString()) return false;
             String digits = id.getAsString();
             return digits.matches("[1-9][0-9]{0,19}") && Long.parseUnsignedLong(digits) != 0;
         } catch (IOException | RuntimeException invalid) {

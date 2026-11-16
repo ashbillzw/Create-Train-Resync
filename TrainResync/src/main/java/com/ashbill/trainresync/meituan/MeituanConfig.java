@@ -15,7 +15,6 @@ import java.util.Map;
 
 /** Delivery settings; older installations store these under a meituan key. */
 public final class MeituanConfig {
-    public boolean enabled;
     public int nearRadius = 500;
     public int farStart = 500;
     public int farEnd = 1000;

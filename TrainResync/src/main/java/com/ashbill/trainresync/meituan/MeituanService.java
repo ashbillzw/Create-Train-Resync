@@ -87,8 +87,10 @@ public final class MeituanService {
 
     @SubscribeEvent public static void start(ServerStartedEvent event) {
         try {
-            MeituanConfig config = MeituanConfig.load(TrainResyncConfig.file(FMLPaths.CONFIGDIR.get(), "meituan.json"));
-            if (config.enabled) SERVICES.put(event.getServer(), new MeituanService(event.getServer(), config));
+            var directory = FMLPaths.CONFIGDIR.get();
+            if (!TrainResyncConfig.load(TrainResyncConfig.file(directory, "trainresync.json")).meituan()) return;
+            MeituanConfig config = MeituanConfig.load(TrainResyncConfig.file(directory, "meituan.json"));
+            SERVICES.put(event.getServer(), new MeituanService(event.getServer(), config));
         } catch (Exception error) { LOGGER.error("Meituan disabled: configuration, required items or saved data unavailable", error); }
     }
 

@@ -26,7 +26,7 @@ public abstract class MCEFDownloaderMixin {
         Path runtime = libraries.resolve(platform);
 
         Path bundled = Minecraft.getInstance().gameDirectory.toPath()
-                .resolve("AshBill").resolve("免下载MCEF");
+                .resolve("ashbill").resolve("免下载MCEF");
         Path archive = bundled.resolve("mcef-libraries.zip");
         if (Files.exists(archive)) {
             try {

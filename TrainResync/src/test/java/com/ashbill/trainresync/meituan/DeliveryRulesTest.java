@@ -197,10 +197,12 @@ public final class DeliveryRulesTest {
         var path = Files.createTempFile("meituan-config-test-", ".json");
         try {
             Files.writeString(path, "{\"railwayDataProtection\":true}");
-            check(!MeituanConfig.load(path).enabled, "missing section disabled without changing railway settings");
+            check(!com.ashbill.trainresync.config.TrainResyncConfig.load(path).meituan(), "missing delivery switch stays off");
+            Files.writeString(path, "{\"meituan\":true}");
+            check(com.ashbill.trainresync.config.TrainResyncConfig.load(path).meituan(), "general configuration enables delivery");
             Files.writeString(path, "{\"meituan\":{\"enabled\":true,\"foods\":{\"test:pie\":{\"价格\":16,\"数量乘数\":4,\"加成\":{\"新品\":1.2}}}}}");
             MeituanConfig loaded = MeituanConfig.load(path);
-            check(loaded.enabled && loaded.foods.size() == 1 && loaded.foods.get("test:pie").quantityMultiplier == 4, "custom JSON replaces food whitelist");
+            check(loaded.foods.size() == 1 && loaded.foods.get("test:pie").quantityMultiplier == 4, "custom JSON replaces food whitelist");
             Files.writeString(path, "{\"meituan\":{\"farProbability\":2}}");
             boolean rejected = false;
             try { MeituanConfig.load(path); } catch (java.io.IOException expected) { rejected = true; }

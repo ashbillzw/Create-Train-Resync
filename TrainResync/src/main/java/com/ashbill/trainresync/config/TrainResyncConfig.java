@@ -9,13 +9,17 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 
 /** Shared configuration for TrainResync. Missing options are disabled by default. */
-public record TrainResyncConfig(boolean railwayDataProtection, String railwayTempArchive, boolean playerSponsorship) {
-    public static final TrainResyncConfig DEFAULT = new TrainResyncConfig(false, null, false);
+public record TrainResyncConfig(boolean railwayDataProtection, String railwayTempArchive, boolean playerSponsorship, boolean meituan) {
+    public static final TrainResyncConfig DEFAULT = new TrainResyncConfig(false, null, false, false);
 
     /** Select each configuration independently, so existing single-file installations still work. */
     public static Path file(Path configDirectory, String filename) {
         Path current = configDirectory.resolve("trainresync").resolve(filename);
         return Files.notExists(current) ? configDirectory.resolve("trainresync.json") : current;
+    }
+
+    private static boolean enabled(JsonElement value) {
+        return value != null && value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean() && value.getAsBoolean();
     }
 
     public static TrainResyncConfig load(Path path) throws IOException {
@@ -28,11 +32,11 @@ public record TrainResyncConfig(boolean railwayDataProtection, String railwayTem
                 option = null;
             }
             JsonElement archive = root.getAsJsonObject().get("railwayTempArchive");
-            JsonElement sponsor = root.getAsJsonObject().get("playerSponsorship");
+            var settings = root.getAsJsonObject();
             return new TrainResyncConfig(option != null && option.getAsBoolean(),
                     archive != null && archive.isJsonPrimitive() && archive.getAsJsonPrimitive().isString()
                             ? archive.getAsString() : null,
-                    sponsor != null && sponsor.isJsonPrimitive() && sponsor.getAsJsonPrimitive().isBoolean() && sponsor.getAsBoolean());
+                    enabled(settings.get("playerSponsorship")), enabled(settings.get("meituan")));
         } catch (NoSuchFileException missing) {
             return DEFAULT;
         } catch (com.google.gson.JsonParseException invalid) {
