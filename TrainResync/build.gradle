@@ -139,3 +139,10 @@ tasks.register('cauldronPotionMixingTest', JavaExec) {
     mainClass = 'com.ashbill.trainresync.compat.cauldron.PotionMixingTest'
 }
 check.dependsOn cauldronPotionMixingTest
+
+tasks.register('gameMenuConfigTest', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.ashbill.trainresync.config.GameMenuConfigTest'
+}
+check.dependsOn gameMenuConfigTest

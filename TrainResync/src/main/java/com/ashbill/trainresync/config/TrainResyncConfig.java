@@ -9,8 +9,37 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 
 /** Shared configuration for TrainResync. Missing options are disabled by default. */
-public record TrainResyncConfig(boolean railwayDataProtection, String railwayTempArchive, boolean playerSponsorship, boolean meituan) {
-    public static final TrainResyncConfig DEFAULT = new TrainResyncConfig(false, null, false, false);
+public record TrainResyncConfig(boolean railwayDataProtection, String railwayTempArchive, boolean playerSponsorship,
+                               boolean meituan, GameMenu gameMenu) {
+    public record GameMenu(int probeIntervalMs, int probeTimeoutMs, int inactiveTimeoutMs) {
+        public static final GameMenu DEFAULT = new GameMenu(1000, 5000, 2500);
+    }
+
+    public static final TrainResyncConfig DEFAULT = new TrainResyncConfig(false, null, false, false, GameMenu.DEFAULT);
+
+    private static int milliseconds(com.google.gson.JsonObject object, String key, int fallback) {
+        if (!object.has(key)) return fallback;
+        try {
+            JsonElement value = object.get(key);
+            if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isNumber()) {
+                int parsed = value.getAsBigDecimal().intValueExact();
+                if (parsed > 0) return parsed;
+            }
+        } catch (ArithmeticException | NumberFormatException ignored) {}
+        com.mojang.logging.LogUtils.getLogger().warn("Ignoring invalid gameMenu.{}; using {} ms", key, fallback);
+        return fallback;
+    }
+
+    private static GameMenu gameMenu(JsonElement element) {
+        if (element == null) return GameMenu.DEFAULT;
+        if (!element.isJsonObject()) {
+            com.mojang.logging.LogUtils.getLogger().warn("Ignoring non-object gameMenu configuration");
+            return GameMenu.DEFAULT;
+        }
+        var object = element.getAsJsonObject();
+        return new GameMenu(milliseconds(object, "probeIntervalMs", 1000),
+                milliseconds(object, "probeTimeoutMs", 5000), milliseconds(object, "inactiveTimeoutMs", 2500));
+    }
 
     /** Select each configuration independently, so existing single-file installations still work. */
     public static Path file(Path configDirectory, String filename) {
@@ -36,7 +65,7 @@ public record TrainResyncConfig(boolean railwayDataProtection, String railwayTem
             return new TrainResyncConfig(option != null && option.getAsBoolean(),
                     archive != null && archive.isJsonPrimitive() && archive.getAsJsonPrimitive().isString()
                             ? archive.getAsString() : null,
-                    enabled(settings.get("playerSponsorship")), enabled(settings.get("meituan")));
+                    enabled(settings.get("playerSponsorship")), enabled(settings.get("meituan")), gameMenu(settings.get("gameMenu")));
         } catch (NoSuchFileException missing) {
             return DEFAULT;
         } catch (com.google.gson.JsonParseException invalid) {
