@@ -1,6 +1,8 @@
 """Collect public player chat from the two Niijima servers over LAN RCON."""
 import argparse
+from contextlib import contextmanager
 import json
+import msvcrt
 import os
 from pathlib import Path
 import re
@@ -47,6 +49,55 @@ def request(stream, kind, body):
     return data[8:-2].decode("utf-8")
 
 
+class PollingPaused(Exception):
+    pass
+
+
+@contextmanager
+def command_lock(directory, server):
+    # All local processes for this server share this byte-range lock.
+    with (directory / f"{server}.command").open("a+b", buffering=0) as state:
+        state.seek(0)
+        msvcrt.locking(state.fileno(), msvcrt.LK_LOCK, 1)
+        try:
+            yield state
+        finally:
+            state.seek(0)
+            msvcrt.locking(state.fileno(), msvcrt.LK_UNLCK, 1)
+
+
+def command(directory, server, stream, body):
+    with command_lock(directory, server) as state:
+        if (directory / f"{server}.paused").exists():
+            raise PollingPaused(server)
+        # Keep an unanswered command visible even if the listener exits mid-request.
+        unanswered = bool(state.read(1))
+        if not unanswered:
+            state.write(b"?")
+        result = request(stream, 2, body)
+        if not unanswered:
+            state.truncate(0)
+        return result
+
+
+def maintenance(directory, args):
+    paused = directory / f"{args.server}.paused"
+    if args.mode == "pause":
+        paused.touch()
+    with command_lock(directory, args.server) as state:
+        if args.mode == "pause":
+            if not paused.exists():
+                raise SystemExit("Another process resumed polling during pause.")
+            if state.read(1):
+                raise SystemExit("Paused, but an RCON command has no confirmed response. Do not proceed with stop.")
+            print(f"{args.server}: paused and drained")
+        else:
+            if args.after_restart:
+                state.truncate(0)
+            paused.unlink(missing_ok=True)
+            print(f"{args.server}: resumed")
+
+
 def open_db(path):
     db = sqlite3.connect(path, timeout=10)
     db.execute("CREATE TABLE IF NOT EXISTS cursors(server PRIMARY KEY, epoch, pos INTEGER)")
@@ -56,10 +107,10 @@ def open_db(path):
     return db
 
 
-def receive(db, server, stream):
+def receive(db, server, stream, directory):
     epoch, pos = db.execute("SELECT epoch,pos FROM cursors WHERE server=?", (server,)).fetchone() or ("", 0)
-    command = f"niijima-chat since {pos} {epoch}".strip()
-    raw = request(stream, 2, command.encode())
+    query = f"niijima-chat since {pos} {epoch}".strip()
+    raw = command(directory, server, stream, query.encode())
     if not raw.startswith("{"):
         raise ValueError("niijima-chat command unavailable")
     page = json.loads(raw)
@@ -87,16 +138,21 @@ def listen(server, secret, path, stop):
     db = open_db(path)
     last_error = None
     while not stop.is_set():
+        if (path.parent / f"{server}.paused").exists():
+            stop.wait(1)
+            continue
         try:
             with socket.create_connection(("192.168.1.222", PORTS[server]), timeout=4) as sock, sock.makefile("rwb") as stream:
                 request(stream, 3, secret)
                 while not stop.is_set():
-                    more = receive(db, server, stream)
+                    more = receive(db, server, stream, path.parent)
                     if last_error is not None:
                         print(f"{server}: listening", file=sys.stderr, flush=True)
                     last_error = None
                     if not more:
                         stop.wait(2)
+        except PollingPaused:
+            continue
         except (OSError, ValueError, KeyError, sqlite3.Error) as exc:
             if str(exc) != last_error:
                 print(f"{server}: {exc}", file=sys.stderr, flush=True)
@@ -116,8 +172,18 @@ def main():
     reply = sub.add_parser("reply")
     reply.add_argument("server", choices=PORTS)
     reply.add_argument("message")
+    for mode in ("pause", "resume"):
+        control = sub.add_parser(mode)
+        control.add_argument("server", choices=PORTS)
+        if mode == "resume":
+            control.add_argument("--after-restart", action="store_true",
+                                 help="clear unresolved requests after verifying a new server process is ready")
     args = parser.parse_args()
     path = Path(os.environ["LOCALAPPDATA"]) / "NiijimaRcon" / "chat.sqlite"
+    if args.mode in ("pause", "resume"):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        maintenance(path.parent, args)
+        return
     if args.mode == "recent":
         with open_db(path) as db:
             rows = db.execute("""SELECT server,time,uuid,name,text FROM chat
@@ -129,8 +195,11 @@ def main():
     if args.mode == "reply":
         with socket.create_connection(("192.168.1.222", PORTS[args.server]), timeout=4) as sock, sock.makefile("rwb") as stream:
             request(stream, 3, secret)
-            command = "tellraw @a " + json.dumps({"text": "[astra] " + args.message}, ensure_ascii=False)
-            print(request(stream, 2, command.encode()))
+            message = "tellraw @a " + json.dumps({"text": "[astra] " + args.message}, ensure_ascii=False)
+            try:
+                print(command(path.parent, args.server, stream, message.encode()))
+            except PollingPaused:
+                raise SystemExit(f"{args.server}: paused")
         return
     stop = threading.Event()
     workers = [threading.Thread(target=listen, args=(server, secret, path, stop)) for server in PORTS]

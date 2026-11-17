@@ -74,6 +74,9 @@
     "vanilla.LeashableTagMixin",
     "vanilla.ServerGamePacketListenerImplMixin"
   ],
+  "server": [
+    "vanilla.DedicatedServerRconMixin"
+  ],
   "client": [
     "search.CreativeSearchBoxAccessor",
     "search.modernfix.LazySearchTreeAccessor",
