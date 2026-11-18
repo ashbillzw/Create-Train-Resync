@@ -30,6 +30,7 @@ import net.minecraftforge.fml.loading.FMLPaths;
 @Mod.EventBusSubscriber(modid = "trainresync")
 public final class PlayerSponsorship {
     private static final int HOUR = 20 * 60 * 60;
+    private static final int NEWCOMER_TICKS = HOUR / 2;
     private static final String KEY = "trainresync:sponsorship";
     // Only online newcomers appear here. A null sponsor means they're waiting.
     private static final Map<MinecraftServer, Map<UUID, UUID>> newcomers = new HashMap<>();
@@ -64,18 +65,16 @@ public final class PlayerSponsorship {
         player.getPersistentData().put(Player.PERSISTED_NBT_TAG, persisted);
         SponsorshipTime clock = SponsorshipTime.get(player.server);
         CompoundTag time = clock.onLogin(player.getStringUUID());
-        if (online == null) {
-            // The server may have been stopped with this player still in enforced spectator mode.
+        if (online == null || time.getLong("playedTicks") >= NEWCOMER_TICKS) {
+            // Restore players who were forced into spectator mode under the previous rules.
             if (record.contains("previousMode")) {
                 if (player.isSpectator()) player.setGameMode(GameType.byId(record.getInt("previousMode")));
                 record.remove("previousMode");
             }
             return;
         }
-        if (time.getLong("playedTicks") < HOUR) {
-            online.put(player.getUUID(), null);
-            waitForSponsor(player, record);
-        }
+        online.put(player.getUUID(), null);
+        waitForSponsor(player, record);
     }
 
     private static void waitForSponsor(ServerPlayer player, CompoundTag record) {
@@ -112,7 +111,7 @@ public final class PlayerSponsorship {
         long ticks = record.getLong("playedTicks") + 1;
         record.putLong("playedTicks", ticks);
         clock.setDirty();
-        if (online != null && ticks == HOUR) online.remove(id);
+        if (online != null && ticks == NEWCOMER_TICKS) online.remove(id);
     }
 
     /** Vanilla's permission-checked /gamemode command, including the server console. */
@@ -121,7 +120,7 @@ public final class PlayerSponsorship {
         SponsorshipTime clock = SponsorshipTime.get(player.server);
         UUID id = player.getUUID();
         CompoundTag record = clock.find(player.getStringUUID());
-        if (record == null || record.getLong("playedTicks") >= HOUR) return change.getAsBoolean();
+        if (record == null || record.getLong("playedTicks") >= NEWCOMER_TICKS) return change.getAsBoolean();
         var online = newcomers.get(player.server);
         boolean restricted = online != null && online.containsKey(id);
         UUID sponsor = restricted ? online.remove(id) : null;
@@ -150,7 +149,7 @@ public final class PlayerSponsorship {
 
     @SubscribeEvent
     public static void commands(RegisterCommandsEvent event) {
-        for (String name : new String[]{"担保", "danbao", "niijima-sponsor"}) {
+        for (String name : new String[]{"老带新", "担保", "danbao", "niijima-sponsor"}) {
             event.getDispatcher().register(Commands.literal(name)
                     .requires(source -> newcomers.containsKey(source.getServer()))
                     .then(Commands.argument("player", EntityArgument.player()).executes(context ->
