@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 
-/** Shared configuration for TrainResync. Missing options are disabled by default. */
 public record TrainResyncConfig(boolean railwayDataProtection, String railwayTempArchive, boolean playerSponsorship,
                                boolean meituan, GameMenu gameMenu) {
     public record GameMenu(int probeIntervalMs, int probeTimeoutMs, int inactiveTimeoutMs) {
