@@ -21,6 +21,10 @@ public class TrainResyncMod {
     }
 
     public TrainResyncMod() {
+        if (net.minecraftforge.fml.ModList.get().isLoaded("numismatics")) {
+            com.ashbill.trainresync.currency.CurrencyBalance.init();
+            DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> com.ashbill.trainresync.currency.CurrencyHud::init);
+        }
         if (com.ashbill.trainresync.compat.cauldron.CauldronCompatibility.available()) {
             net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus()
                     .addListener(TrainResyncMod::addCauldronData);
