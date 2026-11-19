@@ -25,6 +25,7 @@ import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkStatus;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
@@ -129,7 +130,10 @@ public final class MeituanService {
         ServerPlayer player = source.getPlayerOrException();
         MeituanService service = SERVICES.get(source.getServer());
         if (service == null) { message(player, ERROR); return 0; }
-        if (!player.level().dimension().equals(Level.OVERWORLD)) { message(player, "只能在主世界送餐！"); return 0; }
+        if (player.level() != service.level && (action.equals("diancan") || action.equals("songda"))) {
+            message(player, "只能在主世界送餐！");
+            return 0;
+        }
         try {
             service.advanceClock();
             service.expireActive();
@@ -166,7 +170,7 @@ public final class MeituanService {
                 if (!job.step()) jobs.put(viewer, job);
                 else {
                     ServerPlayer player = server.getPlayerList().getPlayer(viewer);
-                    if (player != null && player.level() == level && book.courier(viewer).active == null) show(player);
+                    if (player != null && book.courier(viewer).active == null) show(player);
                 }
             } catch (RuntimeException error) {
                 LOGGER.error("Meituan terrain search failed for {}", viewer, error);
@@ -182,9 +186,10 @@ public final class MeituanService {
         boolean fresh = !book.requests.containsKey(player.getUUID());
         book.request(player.getUUID(), player.getGameProfile().getName(), point);
         message(player, ownerPrefix(player.getUUID()) + "已成功下单，定位 " + xyz(point) + "，等待接单。");
-        MutableComponent cancel = Component.literal("/meituan quxiaodiancan").withStyle(style -> style
+        String cancelCommand = "/美团 取消点餐";
+        MutableComponent cancel = Component.literal(cancelCommand).withStyle(style -> style
                 .withColor(ChatFormatting.YELLOW).withClickEvent(new net.minecraft.network.chat.ClickEvent(
-                        net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, "/meituan quxiaodiancan")));
+                        net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, cancelCommand)));
         player.sendSystemMessage(cancel);
         if (fresh) broadcast(player);
     }
@@ -215,7 +220,7 @@ public final class MeituanService {
             Courier courier = book.couriers.get(id);
             boolean recentSuccess = courier != null && courier.completed.stream().anyMatch(time -> time >= start);
             if (book.lastBroadcastDay.getOrDefault(id, Long.MIN_VALUE) < today - 6 || recentSuccess) {
-                message(player, "收到" + owner.getGameProfile().getName() + "的点餐订单！接单：/meituan jiedan。");
+                message(player, "收到" + owner.getGameProfile().getName() + "的点餐订单！接单：/美团 接单。");
                 book.lastBroadcastDay.put(id, today);
             }
         }
@@ -244,7 +249,8 @@ public final class MeituanService {
             if (selecting && (expired || previous.animals() != courier.animalRevision || previous.players() != book.playerRevision))
                 message(player, CHANGED);
             previews.remove(viewer);
-            jobs.put(viewer, new FillJob(viewer, player.getX(), player.getZ()));
+            Vec3 origin = orderOrigin(player);
+            jobs.put(viewer, new FillJob(viewer, origin.x, origin.z));
             return;
         }
         Preview current = preview(player);
@@ -258,8 +264,17 @@ public final class MeituanService {
             notifyOnline(selected.order().owner(), "订单已被" + player.getGameProfile().getName() + "接单！");
     }
 
+    private Vec3 orderOrigin(ServerPlayer player) {
+        if (player.level().dimension() == Level.NETHER) return player.position().multiply(8, 1, 8);
+        if (player.level().dimension() != Level.END) return player.position();
+        BlockPos spawn = player.getRespawnPosition();
+        return Vec3.atCenterOf(spawn != null && player.getRespawnDimension() == Level.OVERWORLD
+                ? spawn : level.getSharedSpawnPos());
+    }
+
     private Preview preview(ServerPlayer player) {
-        return book.preview(player.getUUID(), player.getX(), player.getZ(), System.currentTimeMillis(), config, random);
+        Vec3 origin = orderOrigin(player);
+        return book.preview(player.getUUID(), origin.x, origin.z, System.currentTimeMillis(), config, random);
     }
 
     private void show(ServerPlayer player) { show(player, preview(player)); }
@@ -268,7 +283,7 @@ public final class MeituanService {
         previews.put(player.getUUID(), preview);
         data.setDirty();
         if (preview.rows().isEmpty()) { message(player, "暂无可接订单。"); return; }
-        message(player, "当前可接取订单如下！用/meituan jiedan <id>接单！");
+        message(player, "当前可接取订单如下！用/美团 接单 <编号>接单！");
         for (int i = 0; i < preview.rows().size(); i++) {
             Quote quote = preview.rows().get(i);
             Order order = quote.order();
@@ -284,7 +299,7 @@ public final class MeituanService {
                 reward.withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
             row.append(reward).append(" | ").append(previewContents(order.menu()))
                     .append(" | " + Math.round(quote.distance()) + "米");
-            String command = "/meituan jiedan " + (i + 1);
+            String command = "/美团 接单 " + (i + 1);
             row.withStyle(style -> style.withClickEvent(new net.minecraft.network.chat.ClickEvent(
                     net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, command)));
             player.sendSystemMessage(row);
