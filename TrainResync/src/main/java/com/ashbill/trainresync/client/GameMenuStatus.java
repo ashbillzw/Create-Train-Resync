@@ -6,6 +6,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerStatusPinger;
 import net.minecraftforge.api.distmarker.Dist;
@@ -75,7 +77,15 @@ public final class GameMenuStatus {
                 @Override
                 public boolean onQuery(CefBrowser browser, CefFrame frame, long id, String request,
                                        boolean persistent, CefQueryCallback callback) {
-                    if (!frame.isMain() || !trusted(frame.getURL()) || !"read".equals(request)) return false;
+                    if (!frame.isMain() || !trusted(frame.getURL(), "click".equals(request))) return false;
+                    if ("click".equals(request)) {
+                        Minecraft client = Minecraft.getInstance();
+                        client.execute(() -> client.getSoundManager().play(
+                                SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F)));
+                        callback.success("{}");
+                        return true;
+                    }
+                    if (!"read".equals(request)) return false;
                     lastRead = Util.getMillis();
                     JsonObject result = new JsonObject();
                     JsonObject nodes = new JsonObject();
@@ -98,11 +108,11 @@ public final class GameMenuStatus {
         }
     }
 
-    private static boolean trusted(String address) {
+    private static boolean trusted(String address, boolean click) {
         try {
             URI uri = URI.create(address);
             if ("https".equals(uri.getScheme()) && "mc1.ashbill.com".equals(uri.getHost()) && uri.getPort() == 25572)
-                return List.of("/v3/", "/v3/index.html", "/index-preview.html").contains(uri.getPath());
+                return (click && uri.getPath().startsWith("/v3/")) || List.of("/v3/", "/v3/index.html", "/index-preview.html").contains(uri.getPath());
             return "file".equals(uri.getScheme()) && uri.getPath() != null
                     && uri.getPath().endsWith("/config/fancymenu/assets/niijima/base.html");
         } catch (IllegalArgumentException ignored) {
