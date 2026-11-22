@@ -15,6 +15,7 @@ import java.util.UUID;
 /** Persistent order rules, independent of Minecraft so state transitions can be exercised directly. */
 public final class DeliveryBook {
     public static final long DAY = 86_400_000L;
+    private static final int DAILY_LIMIT = 7;
     public long runningMillis;
     public long playerRevision;
     public Map<UUID, Request> requests = new LinkedHashMap<>();
@@ -53,6 +54,15 @@ public final class DeliveryBook {
         public Map<UUID, Menu> playerMenus = new HashMap<>();
         public List<Long> completed = new ArrayList<>();
         public Active active;
+        // Existing saves use their full rolling history until an operator resets the quota.
+        private int completionsSinceReset = DAILY_LIMIT;
+
+        public void resetAnimalCooldown() { completionsSinceReset = 0; }
+
+        public void recordCompletion(long now) {
+            completed.add(now);
+            completionsSinceReset = Math.min(DAILY_LIMIT, completionsSinceReset + 1);
+        }
     }
 
     public Courier courier(UUID player) { return couriers.computeIfAbsent(player, ignored -> new Courier()); }
@@ -86,7 +96,7 @@ public final class DeliveryBook {
         courier.animalRevision++;
     }
 
-    public static int target(int completions) { return Math.max(Math.min(7 - completions, 5), 0); }
+    public static int target(int completions) { return Math.max(Math.min(DAILY_LIMIT - completions, 5), 0); }
 
     public Preview preview(UUID viewer, double x, double z, long now, MeituanConfig config, Random random) {
         Courier courier = courier(viewer);
@@ -99,7 +109,7 @@ public final class DeliveryBook {
                     Menu menu = courier.playerMenus.computeIfAbsent(request.id(), ignored -> menu(config, random));
                     selected.add(new Order(request.id(), request.owner(), request.name(), request.point(), menu, Long.MAX_VALUE));
                 });
-        int needed = Math.max(target(completed) - selected.size(), 0);
+        int needed = Math.max(target(Math.min(completed, courier.completionsSinceReset)) - selected.size(), 0);
         courier.animals.stream().sorted((a, b) -> ranking.compare(a.id(), b.id())).limit(needed).forEach(selected::add);
         selected.sort((a, b) -> ranking.compare(a.id(), b.id()));
         return new Preview(playerRevision, courier.animalRevision,

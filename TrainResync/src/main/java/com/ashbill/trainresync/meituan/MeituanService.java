@@ -7,6 +7,7 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -14,11 +15,13 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ChunkHolder;
+import net.minecraft.server.level.TicketType;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
@@ -51,6 +54,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import static com.ashbill.trainresync.meituan.DeliveryBook.*;
 
@@ -64,6 +68,7 @@ public final class MeituanService {
     private static final String[] COINS = {"sun", "crown", "cog", "sprocket", "bevel", "spur"};
     private static final int[] DENOMINATIONS = {4096, 512, 64, 16, 8, 1};
 
+    private static final TicketType<UUID> DELIVERY_SITE = TicketType.create("trainresync_delivery_site", UUID::compareTo);
     private final MinecraftServer server;
     private final ServerLevel level;
     private final MeituanConfig config;
@@ -97,7 +102,12 @@ public final class MeituanService {
 
     @SubscribeEvent public static void stopping(ServerStoppingEvent event) {
         MeituanService service = SERVICES.get(event.getServer());
-        if (service != null) { service.advanceClock(); service.data.setDirty(); }
+        if (service != null) {
+            service.jobs.values().forEach(FillJob::releaseTicket);
+            service.jobs.clear();
+            service.advanceClock();
+            service.data.setDirty();
+        }
     }
 
     @SubscribeEvent public static void stopped(ServerStoppedEvent event) { SERVICES.remove(event.getServer()); }
@@ -118,12 +128,24 @@ public final class MeituanService {
         event.getDispatcher().register(Commands.literal(root)
                 .requires(source -> SERVICES.containsKey(source.getServer()))
                 .executes(context -> run(context.getSource(), "jiedan", null))
+                .then(Commands.literal("debug").requires(source -> source.hasPermission(2))
+                        .then(Commands.literal("resetCooldown")
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .executes(context -> resetCooldown(context.getSource(), EntityArgument.getPlayer(context, "player"))))))
                 .then(Commands.literal(order).executes(context -> run(context.getSource(), "diancan", null)))
                 .then(Commands.literal(cancel).executes(context -> run(context.getSource(), "quxiaodiancan", null)))
                 .then(Commands.literal(deliver).executes(context -> run(context.getSource(), "songda", null)))
                 .then(Commands.literal(accept).executes(context -> run(context.getSource(), "jiedan", null))
                         .then(Commands.argument("id", StringArgumentType.greedyString())
                                 .executes(context -> run(context.getSource(), "jiedan", StringArgumentType.getString(context, "id"))))));
+    }
+
+    private static int resetCooldown(CommandSourceStack source, ServerPlayer target) {
+        MeituanService service = SERVICES.get(source.getServer());
+        service.book.courier(target.getUUID()).resetAnimalCooldown();
+        service.data.setDirty();
+        source.sendSuccess(() -> Component.literal("已重置 " + target.getGameProfile().getName() + " 的动物单冷却。"), false);
+        return 1;
     }
 
     private static int run(CommandSourceStack source, String action, String id) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
@@ -166,13 +188,16 @@ public final class MeituanService {
         if (!jobs.isEmpty()) {
             UUID viewer = jobs.keySet().iterator().next();
             FillJob job = jobs.remove(viewer);
+            ServerPlayer player = server.getPlayerList().getPlayer(viewer);
+            if (player == null) {
+                job.releaseTicket();
+                return;
+            }
             try {
-                if (!job.step()) jobs.put(viewer, job);
-                else {
-                    ServerPlayer player = server.getPlayerList().getPlayer(viewer);
-                    if (player != null && book.courier(viewer).active == null) show(player);
-                }
+                if (!job.step(player)) jobs.put(viewer, job);
+                else if (book.courier(viewer).active == null) show(player);
             } catch (RuntimeException error) {
+                job.releaseTicket();
                 LOGGER.error("Meituan terrain search failed for {}", viewer, error);
                 notifyOnline(viewer, ERROR);
             }
@@ -369,7 +394,7 @@ public final class MeituanService {
         player.containerMenu.broadcastChanges();
         // Commands and expiration run on the server thread. Consume the active state before side effects.
         courier.active = null;
-        courier.completed.add(System.currentTimeMillis());
+        courier.recordCompletion(System.currentTimeMillis());
         data.setDirty();
         if (active.order().owner() != null) {
             deliverFood(point, foods);
@@ -468,11 +493,12 @@ public final class MeituanService {
         final UUID viewer;
         final double centerX, centerZ;
         Search search;
+        boolean loadingShown;
+        void releaseTicket() { if (search != null) search.releaseTicket(); }
         FillJob(UUID viewer, double x, double z) { this.viewer = viewer; centerX = x; centerZ = z; }
-        boolean step() {
-            if (book.courier(viewer).animals.size() >= 5) return true;
-            if (search == null) search = new Search(centerX, centerZ, random.nextDouble() < config.farProbability);
-            Point point = search.step();
+        boolean step(ServerPlayer player) {
+            if (search == null) search = new Search(this, random.nextDouble() < config.farProbability);
+            Point point = search.step(player);
             if (point == null) return false;
             long expires = System.currentTimeMillis() + 1000L * (config.animalMinSeconds + random.nextInt(config.animalMaxSeconds - config.animalMinSeconds + 1));
             String name = config.animals.get(random.nextInt(config.animals.size())) + "-" + String.format(Locale.ROOT, "%04d", random.nextInt(10000));
@@ -484,32 +510,88 @@ public final class MeituanService {
     }
 
     private final class Search {
-        final double centerX, centerZ;
+        final FillJob job;
         final boolean far;
-        int attempts, x, z;
+        int attempts, failedLoads, x, z;
+        int ticketStartTick;
+        ChunkPos ticketPos;
         CompletableFuture<Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure>> pending;
-        Search(double x, double z, boolean far) { centerX = x; centerZ = z; this.far = far; }
-        Point step() {
+        Search(FillJob job, boolean far) { this.job = job; this.far = far; }
+
+        void releaseTicket() {
+            if (ticketPos != null) {
+                level.getChunkSource().removeRegionTicket(DELIVERY_SITE, ticketPos, 0, job.viewer);
+                ticketPos = null;
+            }
+            pending = null;
+        }
+
+        private void requestChunk(ChunkStatus status) {
+            ChunkPos pos = ticketPos;
+            var source = level.getChunkSource();
+            // The off-thread entry schedules on the server thread without managedBlock in our tick.
+            pending = CompletableFuture.supplyAsync(() -> source.getChunkFuture(pos.x, pos.z, status, true))
+                    .thenCompose(future -> future);
+        }
+
+        Point step(ServerPlayer player) {
             if (pending == null) {
                 attempts++;
                 double min = far ? config.farStart : 0, max = far ? config.farEnd : config.nearRadius;
                 double radius = Math.sqrt(min * min + random.nextDouble() * (max * max - min * min));
                 double angle = random.nextDouble() * Math.PI * 2;
                 x = (int) Math.floor(Math.max(level.getWorldBorder().getMinX() + 1,
-                        Math.min(level.getWorldBorder().getMaxX() - 1, centerX + Math.cos(angle) * radius)));
+                        Math.min(level.getWorldBorder().getMaxX() - 1, job.centerX + Math.cos(angle) * radius)));
                 z = (int) Math.floor(Math.max(level.getWorldBorder().getMinZ() + 1,
-                        Math.min(level.getWorldBorder().getMaxZ() - 1, centerZ + Math.sin(angle) * radius)));
+                        Math.min(level.getWorldBorder().getMaxZ() - 1, job.centerZ + Math.sin(angle) * radius)));
                 var source = level.getChunkSource();
-                int chunkX = x >> 4, chunkZ = z >> 4;
-                // This public API schedules its work on the main thread when called off-thread.
-                // Its main-thread branch managedBlocks; do not invoke that branch from a tick.
-                pending = CompletableFuture.supplyAsync(() -> source.getChunkFuture(chunkX, chunkZ, ChunkStatus.FULL, true))
-                        .thenCompose(future -> future);
+                ChunkPos pos = new ChunkPos(x >> 4, z >> 4);
+                ChunkAccess loaded = source.getChunkNow(pos.x, pos.z);
+                if (loaded != null) return landingPoint(loaded);
+
+                ticketPos = pos;
+                ticketStartTick = ticks;
+                source.addRegionTicket(DELIVERY_SITE, pos, 0, job.viewer);
+                // EMPTY reads the saved chunk (including its actual generation status).
+                requestChunk(ChunkStatus.EMPTY);
                 return null;
             }
-            if (!pending.isDone()) return null;
-            ChunkAccess chunk = pending.join().left().orElseThrow(() -> new IllegalStateException("Chunk unavailable during Meituan search"));
-            pending = null;
+            if (!pending.isDone()) {
+                if (ticks - ticketStartTick >= 20 * 60) return retryLoad(new IllegalStateException("Timed out waiting for delivery terrain"));
+                return null;
+            }
+            Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure> result;
+            try {
+                result = pending.join();
+            } catch (CompletionException error) {
+                return retryLoad(error);
+            }
+            if (result.right().isPresent()) return retryLoad(new IllegalStateException(result.right().get().toString()));
+            ChunkAccess chunk = result.left().orElseThrow();
+            if (!chunk.getStatus().isOrAfter(ChunkStatus.FULL)) {
+                if (!job.loadingShown) {
+                    player.displayClientMessage(Component.literal(PREFIX + "正在加载订单列表......"), true);
+                    job.loadingShown = true;
+                }
+                requestChunk(ChunkStatus.FULL);
+                return null;
+            }
+            try {
+                return landingPoint(chunk);
+            } finally {
+                releaseTicket();
+            }
+        }
+
+        private Point retryLoad(RuntimeException cause) {
+            ChunkPos failed = ticketPos;
+            releaseTicket();
+            if (++failedLoads >= 3) throw new IllegalStateException("Three delivery site requests failed; last chunk " + failed, cause);
+            LOGGER.warn("Meituan delivery site unavailable at {} for {}", failed, job.viewer, cause);
+            return null;
+        }
+
+        private Point landingPoint(ChunkAccess chunk) {
             BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, level.getMaxBuildHeight() - 1, z);
             for (int y = level.getMaxBuildHeight() - 1; y >= level.getMinBuildHeight(); y--) {
                 pos.setY(y);

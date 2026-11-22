@@ -82,6 +82,25 @@ public final class DeliveryRulesTest {
         check(empty.preview(viewer, 0, 0, now, config, random).rows().isEmpty(), "zero player orders plus N7 produces zero rows");
         check(empty.courier(viewer).animals.size() == 5, "invisible animals remain in pool");
 
+        // Old saves have no reset counter. They still use the full 24-hour quota.
+        Gson gson = new Gson();
+        var oldSave = gson.toJsonTree(empty).getAsJsonObject();
+        oldSave.getAsJsonObject("couriers").getAsJsonObject(viewer.toString()).remove("completionsSinceReset");
+        empty = gson.fromJson(oldSave, DeliveryBook.class);
+        check(empty.preview(viewer, 0, 0, now, config, random).rows().isEmpty(), "old save keeps exhausted quota");
+        fill(empty, owner, now + 5000);
+        for (int i = 0; i < 7; i++) empty.courier(owner).recordCompletion(now);
+        empty.courier(viewer).resetAnimalCooldown();
+        empty = gson.fromJson(gson.toJson(empty), DeliveryBook.class);
+        check(empty.preview(viewer, 0, 0, now, config, random).rows().size() == 5, "reset survives restart");
+        check(empty.courier(viewer).completed.size() == 7, "reset preserves recent completion history");
+        check(empty.preview(owner, 0, 0, now, config, random).rows().isEmpty(), "other courier still capped");
+        for (int i = 1; i <= 7; i++) {
+            empty.courier(viewer).recordCompletion(now);
+            check(empty.preview(viewer, 0, 0, now, config, random).rows().size() == target(i), "post-reset quota " + i);
+        }
+        check(empty.preview(viewer, 0, 0, now + DAY, config, random).rows().size() == 5, "rolling window still expires");
+
         Menu priced = new Menu(List.of(new Line("test:a", 1, decimal("0.7"), Map.of(), false),
                 new Line("test:b", 1, decimal("0.7"), Map.of("新品", decimal("1.5")), false)), decimal("1.5"));
         Order special = new Order(UUID.randomUUID(), owner, "Owner", new Point(900, 60, 0), priced, Long.MAX_VALUE);
