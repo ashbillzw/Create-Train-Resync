@@ -147,3 +147,10 @@ tasks.register('gameMenuConfigTest', JavaExec) {
     mainClass = 'com.ashbill.trainresync.config.GameMenuConfigTest'
 }
 check.dependsOn gameMenuConfigTest
+
+tasks.register('worldTimeCommandsTest', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.ashbill.trainresync.time.WorldTimeCommandsTest'
+}
+check.dependsOn worldTimeCommandsTest
