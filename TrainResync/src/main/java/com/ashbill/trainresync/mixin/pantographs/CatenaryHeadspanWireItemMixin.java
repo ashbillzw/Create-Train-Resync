@@ -12,7 +12,6 @@ public abstract class CatenaryHeadspanWireItemMixin {
     @WrapOperation(method = "createHudInfoText", at = @At(value = "INVOKE",
             target = "Lde/mrjulsen/mcdragonlib/util/TextUtils;text(Ljava/lang/String;)Lnet/minecraft/network/chat/MutableComponent;"))
     private MutableComponent trainresync$translateHeightLabel(String text, Operation<MutableComponent> original) {
-        // Leave numeric values, formatting and all other text construction unchanged.
         return switch (text) {
             case "Upper Tension Wire height difference" -> Component.translatable("trainresync.paw.upper_tension_height_difference");
             case "Top Support Wire height difference" -> Component.translatable("trainresync.paw.top_support_height_difference");

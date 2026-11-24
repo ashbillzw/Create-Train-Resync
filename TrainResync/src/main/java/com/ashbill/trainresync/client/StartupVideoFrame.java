@@ -23,6 +23,10 @@ final class StartupVideoFrame {
         else MCEF.scheduleForInit(ok -> { if (ok) register(); });
     }
 
+    private static boolean isOpeningPage(CefFrame frame) {
+        return PAGE.equals(frame.getURL()) || V3_PAGE.equals(frame.getURL());
+    }
+
     private static void register() {
         var client = MCEF.getClient();
         var config = new CefMessageRouter.CefMessageRouterConfig("niijimaVideoFrame", "niijimaCancelVideoFrame");
@@ -30,7 +34,7 @@ final class StartupVideoFrame {
             @Override
             public boolean onQuery(CefBrowser browser, CefFrame frame, long id, String request,
                                    boolean persistent, CefQueryCallback callback) {
-                if (!(PAGE.equals(frame.getURL()) || V3_PAGE.equals(frame.getURL())) || !"presented".equals(request)) return false;
+                if (!isOpeningPage(frame) || !"presented".equals(request)) return false;
                 presented = true;
                 callback.success("");
                 return true;
@@ -39,7 +43,7 @@ final class StartupVideoFrame {
         client.addLoadHandler(new CefLoadHandlerAdapter() {
             @Override
             public void onLoadEnd(CefBrowser browser, CefFrame frame, int status) {
-                if (presented || !(PAGE.equals(frame.getURL()) || V3_PAGE.equals(frame.getURL())) || status != 200) return;
+                if (presented || !isOpeningPage(frame) || status != 200) return;
                 frame.executeJavaScript("""
                         document.querySelector('video')?.requestVideoFrameCallback(() => {
                             window.niijimaVideoFrame({request: 'presented'});

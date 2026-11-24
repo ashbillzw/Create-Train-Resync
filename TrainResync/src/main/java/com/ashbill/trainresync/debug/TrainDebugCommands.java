@@ -101,8 +101,9 @@ public final class TrainDebugCommands {
         List<Train> matches = trains().stream().filter(t -> t.name.getString().contains(filter))
                 .sorted(Comparator.comparing(t -> t.name.getString())).toList();
         if (matches.isEmpty()) reply(source, "无匹配列车");
+        var out = output(source);
         for (Train train : matches)
-            output(source).accept("LIST id=" + train.id + " name=" + TrainDebugReport.quote(train.name.getString())
+            out.accept("LIST id=" + train.id + " name=" + TrainDebugReport.quote(train.name.getString())
                     + " state=" + train.runtime.state + " destination=" + TrainDebugReport.destination(train.navigation));
         return matches.size();
     }

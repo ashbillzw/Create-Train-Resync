@@ -54,7 +54,6 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
             return hasMods(mods, "mcef")
                     && System.getProperty("os.name").toLowerCase(Locale.ROOT).startsWith("windows");
         }
-        // Preserve the existing fallback for mixins outside these optional feature groups.
         return true;
     }
 

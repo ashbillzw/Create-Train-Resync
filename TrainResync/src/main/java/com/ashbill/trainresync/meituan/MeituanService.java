@@ -199,7 +199,7 @@ public final class MeituanService {
             } catch (RuntimeException error) {
                 job.releaseTicket();
                 LOGGER.error("Meituan terrain search failed for {}", viewer, error);
-                notifyOnline(viewer, ERROR);
+                message(player, ERROR);
             }
         }
     }
@@ -268,10 +268,10 @@ public final class MeituanService {
         int index = -1;
         if (rawId != null) try { index = Integer.parseInt(rawId.trim()) - 1; } catch (NumberFormatException ignored) { }
         boolean selecting = previous != null && index >= 0 && index < previous.rows().size();
-        boolean expired = book.expireAnimals(viewer, System.currentTimeMillis());
+        book.expireAnimals(viewer, System.currentTimeMillis());
         if (jobs.containsKey(viewer)) return;
         if (courier.animals.size() < 5) {
-            if (selecting && (expired || previous.animals() != courier.animalRevision || previous.players() != book.playerRevision))
+            if (selecting && (previous.animals() != courier.animalRevision || previous.players() != book.playerRevision))
                 message(player, CHANGED);
             previews.remove(viewer);
             Vec3 origin = orderOrigin(player);
