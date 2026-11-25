@@ -29,7 +29,7 @@ final class StartupVideoFrame {
 
     private static void register() {
         var client = MCEF.getClient();
-        var config = new CefMessageRouter.CefMessageRouterConfig("niijimaVideoFrame", "niijimaCancelVideoFrame");
+        var config = new CefMessageRouter.CefMessageRouterConfig("niijimaOpeningFrame", "niijimaCancelOpeningFrame");
         client.getHandle().addMessageRouter(CefMessageRouter.create(config, new CefMessageRouterHandlerAdapter() {
             @Override
             public boolean onQuery(CefBrowser browser, CefFrame frame, long id, String request,
@@ -43,10 +43,11 @@ final class StartupVideoFrame {
         client.addLoadHandler(new CefLoadHandlerAdapter() {
             @Override
             public void onLoadEnd(CefBrowser browser, CefFrame frame, int status) {
-                if (presented || !isOpeningPage(frame) || status != 200) return;
+                // Only the legacy player still relies on the injected listener.
+                if (presented || !PAGE.equals(frame.getURL()) || status != 200) return;
                 frame.executeJavaScript("""
                         document.querySelector('video')?.requestVideoFrameCallback(() => {
-                            window.niijimaVideoFrame({request: 'presented'});
+                            window.niijimaOpeningFrame({request: 'presented'});
                         });
                         """, frame.getURL(), 1);
             }

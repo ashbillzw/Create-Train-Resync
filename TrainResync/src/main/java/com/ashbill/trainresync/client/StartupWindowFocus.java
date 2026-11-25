@@ -2,10 +2,17 @@ package com.ashbill.trainresync.client;
 
 import com.mojang.logging.LogUtils;
 import com.sun.jna.Pointer;
+import com.sun.jna.platform.win32.Kernel32;
+import com.sun.jna.platform.win32.WinDef.DWORD;
 import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef.HWND;
 import de.keksuccino.fancymenu.customization.customgui.CustomGuiBaseScreen;
+import de.keksuccino.fancymenu.customization.screen.identifier.ScreenIdentifierHandler;
+import de.keksuccino.fancymenu.events.screen.RenderScreenEvent;
+import de.keksuccino.fancymenu.util.event.acara.EventHandler;
+import me.srrapero720.chloride.ChlorideConfig;
+import me.srrapero720.chloride.impl.Borderless;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -19,6 +26,9 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWNativeWin32;
 import org.lwjgl.system.Platform;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /** Bring the initial video page forward, with a bounded retry window. */
 @Mod.EventBusSubscriber(modid = "trainresync", value = Dist.CLIENT)
@@ -37,7 +47,10 @@ public final class StartupWindowFocus {
     public static final class Setup {
         @SubscribeEvent
         public static void setup(FMLClientSetupEvent event) {
-            if (Platform.get() == Platform.WINDOWS && ModList.get().isLoaded("fancymenu") && ModList.get().isLoaded("mcef")) {
+            if (Platform.get() != Platform.WINDOWS || !ModList.get().isLoaded("fancymenu")) return;
+            if (ModList.get().isLoaded("drippyloadingscreen") && ModList.get().isLoaded("chloride"))
+                event.enqueueWork(DrippySplash::listen);
+            if (ModList.get().isLoaded("mcef")) {
                 event.enqueueWork(() -> {
                     StartupVideoFrame.install();
                     waitForVideoFrame = true;
@@ -59,7 +72,7 @@ public final class StartupWindowFocus {
             }
             visitedVideo = true;
             if (minecraft.getOverlay() == null && StartupVideoFrame.presented()) {
-                WindowsFocus.onFirstFrame(minecraft.getWindow().getWindow());
+                WindowsFocus.present(minecraft.getWindow().getWindow(), true);
                 finished = true;
             }
             return;
@@ -100,37 +113,94 @@ public final class StartupWindowFocus {
                 : GLFW.glfwGetWindowAttrib(window, GLFW.GLFW_FOCUSED) == GLFW.GLFW_TRUE;
     }
 
+    private static final class DrippySplash {
+        private static boolean pending = true;
+
+        static void listen() {
+            EventHandler.INSTANCE.registerListener(event -> {
+                if (!pending) return;
+                Minecraft game = Minecraft.getInstance();
+                if (game.getOverlay() == null) {
+                    pending = false; // A later resource reload can show the same splash.
+                    return;
+                }
+                Screen screen = ((RenderScreenEvent.Post) event).getScreen();
+                if (!ScreenIdentifierHandler.isIdentifierOfScreen("drippy_loading_overlay", screen)) return;
+                pending = false;
+                if (ChlorideConfig.fullScreen == Borderless.Mode.FULLSCREEN && game.getWindow().isFullscreen())
+                    WindowsFocus.present(game.getWindow().getWindow(), false);
+            }, RenderScreenEvent.Post.class);
+        }
+    }
+
     private static final class WindowsFocus {
-        private static final int POSITION_FLAGS = WinUser.SWP_NOMOVE | WinUser.SWP_NOSIZE
-                | WinUser.SWP_NOACTIVATE | WinUser.SWP_NOOWNERZORDER;
-        private static final HWND HWND_TOP = null; // Win32 defines HWND_TOP as (HWND)0.
+        private static final HWND TOPMOST = new HWND(Pointer.createConstant(-1));
+        private static final HWND NOT_TOPMOST = new HWND(Pointer.createConstant(-2));
+        private static final int POSITION_FLAGS = WinUser.SWP_NOMOVE | WinUser.SWP_NOSIZE;
         private static final int WS_EX_TOPMOST = 0x00000008;
 
-        private static void onFirstFrame(long window) {
+        private static void present(long window, boolean openingVideo) {
+            String stage = openingVideo ? "Opening video" : "Drippy splash";
             HWND game = new HWND(new Pointer(GLFWNativeWin32.glfwGetWin32Window(window)));
             User32 api = User32.INSTANCE;
             if (GLFW.glfwGetWindowAttrib(window, GLFW.GLFW_ICONIFIED) == GLFW.GLFW_TRUE)
                 api.ShowWindow(game, WinUser.SW_SHOWNOACTIVATE);
             // Chloride sets Minecraft's fullscreen flag for both borderless and exclusive fullscreen.
-            if (!Minecraft.getInstance().getWindow().isFullscreen()
+            if (openingVideo && !Minecraft.getInstance().getWindow().isFullscreen()
                     && GLFW.glfwGetWindowAttrib(window, GLFW.GLFW_MAXIMIZED) != GLFW.GLFW_TRUE) {
                 GLFW.glfwMaximizeWindow(window);
                 LogUtils.getLogger().info("Maximized windowed game for the opening video");
             }
             HWND previous = api.GetForegroundWindow();
             if (game.equals(previous)) {
-                LogUtils.getLogger().info("Opening video frame presented; game already in foreground");
+                LogUtils.getLogger().info("{} frame presented; game already in foreground", stage);
                 return;
             }
-            if ((api.GetWindowLong(game, WinUser.GWL_EXSTYLE) & WS_EX_TOPMOST) != 0) {
-                LogUtils.getLogger().info("Opening video frame presented; game already topmost (foreground={})", previous);
-                return;
+            // SDL2's force-raise sequence, preserving maximization and any existing topmost setting.
+            DWORD currentThread = new DWORD(Kernel32.INSTANCE.GetCurrentThreadId());
+            DWORD otherThread = new DWORD(previous == null ? 0 : api.GetWindowThreadProcessId(previous, null));
+            boolean wasTopmost = isTopmost(game);
+            boolean attached = otherThread.longValue() != 0 && !otherThread.equals(currentThread)
+                    && api.AttachThreadInput(otherThread, currentThread, true);
+            boolean raised = false;
+            boolean lowered = false;
+            boolean activated;
+            try {
+                if (!wasTopmost) {
+                    raised = api.SetWindowPos(game, TOPMOST, 0, 0, 0, 0, POSITION_FLAGS);
+                    if (raised)
+                        lowered = api.SetWindowPos(game, NOT_TOPMOST, 0, 0, 0, 0, POSITION_FLAGS);
+                }
+                activated = api.SetForegroundWindow(game);
+            } finally {
+                try {
+                    if (raised && !lowered && isTopmost(game))
+                        api.SetWindowPos(game, NOT_TOPMOST, 0, 0, 0, 0, POSITION_FLAGS | WinUser.SWP_NOACTIVATE);
+                } finally {
+                    if (attached && !api.AttachThreadInput(otherThread, currentThread, false))
+                        LogUtils.getLogger().warn("Could not detach {} input queues", stage);
+                }
             }
-            if (api.SetWindowPos(game, HWND_TOP, 0, 0, 0, 0, POSITION_FLAGS)) {
-                LogUtils.getLogger().info("Opening video frame presented; requested one-time raise for game={} (foreground={})", game, previous);
-            } else {
-                LogUtils.getLogger().warn("Could not raise opening video: Win32 error {}", com.sun.jna.Native.getLastError());
-            }
+            if (game.equals(api.GetForegroundWindow()))
+                api.SetFocus(game);
+            LogUtils.getLogger().info("{} activation: game={}, before={}, previouslyTopmost={}, "
+                    + "attached={}, raised={}, lowered={}, activated={}", stage, game, previous, wasTopmost,
+                    attached, raised, lowered, activated);
+            logFocus(game, stage, "immediate");
+            CompletableFuture.delayedExecutor(500, TimeUnit.MILLISECONDS).execute(() -> logFocus(game, stage, "500ms"));
+        }
+
+        private static boolean isTopmost(HWND game) {
+            return (User32.INSTANCE.GetWindowLong(game, WinUser.GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
+        }
+
+        private static void logFocus(HWND game, String stage, String sample) {
+            User32 api = User32.INSTANCE;
+            WinUser.GUITHREADINFO info = new WinUser.GUITHREADINFO();
+            info.cbSize = info.size();
+            boolean valid = api.GetGUIThreadInfo(0, info);
+            LogUtils.getLogger().info("{} focus {}: foreground={}, keyboardFocus={}, game={}, topmost={}",
+                    stage, sample, api.GetForegroundWindow(), valid ? info.hwndFocus : null, game, isTopmost(game));
         }
 
         private static boolean isForeground(long window) {

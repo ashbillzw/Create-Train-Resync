@@ -10,7 +10,9 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -62,6 +64,8 @@ import static com.ashbill.trainresync.meituan.DeliveryBook.*;
 public final class MeituanService {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<MinecraftServer, MeituanService> SERVICES = new IdentityHashMap<>();
+    public static final String OFFER_ROW = "trainresync.meituan.offer_row";
+    public static final String DISH_LINK = "trainresync:meituan/dish";
     private static final String PREFIX = "【美团】";
     private static final String ERROR = "暂时无法完成操作，请稍后重试。";
     private static final String CHANGED = "选单发生变化，请重新选择。";
@@ -213,8 +217,7 @@ public final class MeituanService {
         message(player, ownerPrefix(player.getUUID()) + "已成功下单，定位 " + xyz(point) + "，等待接单。");
         String cancelCommand = "/美团 取消点餐";
         MutableComponent cancel = Component.literal(cancelCommand).withStyle(style -> style
-                .withColor(ChatFormatting.YELLOW).withClickEvent(new net.minecraft.network.chat.ClickEvent(
-                        net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, cancelCommand)));
+                .withColor(ChatFormatting.YELLOW).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cancelCommand)));
         player.sendSystemMessage(cancel);
         if (fresh) broadcast(player);
     }
@@ -266,8 +269,11 @@ public final class MeituanService {
         if (courier.active != null) { activeMessage(player, "当前还有未完成订单！", courier.active); return; }
         Preview previous = previews.get(viewer);
         int index = -1;
-        if (rawId != null) try { index = Integer.parseInt(rawId.trim()) - 1; } catch (NumberFormatException ignored) { }
+        String[] args = rawId == null ? new String[0] : rawId.trim().split(" ", 2);
+        if (args.length > 0) try { index = Integer.parseInt(args[0]) - 1; } catch (NumberFormatException ignored) { }
         boolean selecting = previous != null && index >= 0 && index < previous.rows().size();
+        boolean linked = args.length == 2;
+        if (linked && !selecting) message(player, CHANGED);
         book.expireAnimals(viewer, System.currentTimeMillis());
         if (jobs.containsKey(viewer)) return;
         if (courier.animals.size() < 5) {
@@ -280,7 +286,12 @@ public final class MeituanService {
         }
         Preview current = preview(player);
         if (!selecting) { show(player, current); return; }
-        if (!DeliveryBook.sameSelection(previous, current)) { message(player, CHANGED); show(player, current); return; }
+        if (!DeliveryBook.sameSelection(previous, current)
+                || (linked && !args[1].equals(offerKey(current.rows().get(index))))) {
+            message(player, CHANGED);
+            show(player, current);
+            return;
+        }
         Quote selected = current.rows().get(index);
         if (!book.accept(viewer, selected, config)) { message(player, CHANGED); show(player); return; }
         previews.remove(viewer);
@@ -308,44 +319,51 @@ public final class MeituanService {
         previews.put(player.getUUID(), preview);
         data.setDirty();
         if (preview.rows().isEmpty()) { message(player, "暂无可接订单。"); return; }
-        message(player, "当前可接取订单如下！用/美团 接单 <编号>接单！");
+        var table = Component.empty().append(Component.translatableWithFallback(OFFER_ROW,
+                "%s%s | %s | %s%s", "", "客户", "价格", "距离", "").withStyle(ChatFormatting.GRAY));
         for (int i = 0; i < preview.rows().size(); i++) {
             Quote quote = preview.rows().get(i);
-            Order order = quote.order();
-            MutableComponent row = Component.literal((i + 1) + " | " + order.name() + " | " + number(quote.base()) + "元");
-            // Item-specific bonuses stay attached to their food; they must not look like whole-order multipliers.
-            if (quote.base().compareTo(quote.subtotal()) != 0) row.append(" → " + number(quote.subtotal()) + "元");
-            if (order.menu().hot().compareTo(BigDecimal.ONE) != 0) row.append(" ×" + number(order.menu().hot()) + "火爆");
-            if (quote.far()) row.append(" ×" + number(config.farMultiplier) + "远单");
-            if (order.owner() != null) row.append(" ×" + number(config.playerMultiplier) + "玩家单");
-            if (config.eventActive) row.append(" ×" + number(MeituanConfig.EVENT_MULTIPLIER) + "活动期间");
-            MutableComponent reward = Component.literal(" → " + quote.reward() + "元");
-            if (quote.highlighted())
-                reward.withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
-            row.append(reward).append(" | ").append(previewContents(order.menu()))
-                    .append(" | " + Math.round(quote.distance()) + "米");
-            String command = "/美团 接单 " + (i + 1);
-            row.withStyle(style -> style.withClickEvent(new net.minecraft.network.chat.ClickEvent(
-                    net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, command)));
-            player.sendSystemMessage(row);
+            MutableComponent price = Component.literal(quote.reward() + "元");
+            if (quote.highlighted()) price.withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
+            String command = "/美团 接单 " + (i + 1) + " " + offerKey(quote);
+            var expand = Component.literal("【展开】").withStyle(style -> style.withColor(ChatFormatting.YELLOW).withUnderlined(true)
+                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, offerDetails(quote)))
+                    .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command)));
+            table.append("\n").append(Component.translatableWithFallback(OFFER_ROW, "%s%s | %s | %s | %s",
+                    "【" + (i + 1) + "】", quote.order().name(), price, Math.round(quote.distance()) + "米", expand));
         }
+        player.sendSystemMessage(table);
+    }
+
+    // A pinned chat entry may outlive its list position or price.
+    private static String offerKey(Quote quote) {
+        return quote.order().id() + "/" + quote.reward();
+    }
+
+    private MutableComponent offerDetails(Quote quote) {
+        Order order = quote.order();
+        MutableComponent details = Component.literal(order.name());
+        for (Line line : order.menu().lines()) {
+            details.append("\n").append(orderItemName(line)).append(" ×" + line.count());
+            line.bonuses().forEach((name, value) -> {
+                if (value.compareTo(BigDecimal.ONE) != 0) details.append("（" + name + "×" + number(value) + "）");
+            });
+        }
+        details.append("\n" + number(quote.base()) + "元");
+        // Item-specific bonuses stay attached to their food; they must not look like whole-order multipliers.
+        if (quote.base().compareTo(quote.subtotal()) != 0) details.append(" → " + number(quote.subtotal()) + "元");
+        if (order.menu().hot().compareTo(BigDecimal.ONE) != 0) details.append(" ×" + number(order.menu().hot()) + "火爆");
+        if (quote.far()) details.append(" ×" + number(config.farMultiplier) + "远单");
+        if (order.owner() != null) details.append(" ×" + number(config.playerMultiplier) + "玩家单");
+        if (config.eventActive) details.append(" ×" + number(MeituanConfig.EVENT_MULTIPLIER) + "活动期间");
+        return details.append(" → " + quote.reward() + "元");
     }
 
     private static Component orderItemName(Line line) {
-        Component name = new ItemStack(item(line.item())).getHoverName();
-        return line.prank() ? name.copy().withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD) : name;
-    }
-
-    private static MutableComponent previewContents(Menu menu) {
-        MutableComponent text = Component.empty();
-        for (Line line : menu.lines()) {
-            if (!text.getString().isEmpty()) text.append(" ");
-            text.append(orderItemName(line)).append(" ×" + line.count());
-            line.bonuses().forEach((name, value) -> {
-                if (value.compareTo(BigDecimal.ONE) != 0) text.append("（" + name + "×" + number(value) + "）");
-            });
-        }
-        return text;
+        var stack = new ItemStack(item(line.item()));
+        var name = stack.getHoverName().copy().withStyle(style -> style.withUnderlined(true).withInsertion(DISH_LINK)
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_ITEM, new HoverEvent.ItemStackInfo(stack))));
+        return line.prank() ? name.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD) : name;
     }
 
     private static void activeMessage(ServerPlayer player, String prefix, Active active) {
@@ -501,7 +519,7 @@ public final class MeituanService {
             Point point = search.step(player);
             if (point == null) return false;
             long expires = System.currentTimeMillis() + 1000L * (config.animalMinSeconds + random.nextInt(config.animalMaxSeconds - config.animalMinSeconds + 1));
-            String name = config.animals.get(random.nextInt(config.animals.size())) + "-" + String.format(Locale.ROOT, "%04d", random.nextInt(10000));
+            String name = config.animals.get(random.nextInt(config.animals.size())) + "-" + String.format(Locale.ROOT, "%03d", random.nextInt(1000));
             book.addAnimal(viewer, new Order(UUID.randomUUID(), null, name, point, menu(config, random), expires));
             data.setDirty();
             search = null;
