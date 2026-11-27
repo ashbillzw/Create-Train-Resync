@@ -31,15 +31,34 @@ public final class DeliveryBook {
     public record Request(UUID id, UUID owner, String name, Point point) {}
     public record Line(String item, int count, BigDecimal unitPrice, Map<String, BigDecimal> bonuses, boolean prank) {
         public BigDecimal base() { return unitPrice.multiply(BigDecimal.valueOf(count)); }
-        public BigDecimal subtotal() {
-            BigDecimal value = base();
+        public BigDecimal adjustedUnitPrice() {
+            BigDecimal value = unitPrice;
             for (BigDecimal multiplier : bonuses.values()) value = value.multiply(multiplier);
             return value;
         }
+        public BigDecimal subtotal() { return adjustedUnitPrice().multiply(BigDecimal.valueOf(count)); }
     }
     public record Menu(List<Line> lines, BigDecimal hot) {}
     public record Order(UUID id, UUID owner, String name, Point point, Menu menu, long expiresAt) {}
-    public record Active(Order order, long reward, long deadline) {}
+    public record Active(Order order, long reward, long deadline, BigDecimal qualityMultiplier) {
+        public long qualityReward(BigDecimal extra, MeituanConfig config) {
+            if (extra.signum() == 0) return 0;
+            if (qualityMultiplier != null) return extra.multiply(qualityMultiplier).setScale(0, RoundingMode.FLOOR).longValueExact();
+            // Older saves kept the whole-coin payment but not the distance and event multipliers.
+            BigDecimal subtotal = config.deliveryBaseRate.multiply(BigDecimal.valueOf(order.menu().lines().size() + 1L));
+            for (Line line : order.menu().lines()) subtotal = subtotal.add(line.subtotal());
+            BigDecimal usual = order.menu().hot();
+            if (order.owner() != null) usual = usual.multiply(config.playerMultiplier);
+            for (BigDecimal distance : List.of(BigDecimal.ONE, config.farMultiplier)) {
+                for (BigDecimal event : List.of(BigDecimal.ONE, MeituanConfig.EVENT_MULTIPLIER)) {
+                    BigDecimal factor = usual.multiply(distance).multiply(event);
+                    if (subtotal.multiply(factor).setScale(0, RoundingMode.FLOOR).compareTo(BigDecimal.valueOf(reward)) == 0)
+                        return extra.multiply(factor).setScale(0, RoundingMode.FLOOR).longValueExact();
+                }
+            }
+            return extra.multiply(BigDecimal.valueOf(reward)).divide(subtotal, 0, RoundingMode.FLOOR).longValueExact();
+        }
+    }
     public record Quote(Order order, boolean far, double distance, BigDecimal base, BigDecimal subtotal,
                         BigDecimal orderMultiplier, long reward) {
         public boolean highlighted() {
@@ -138,7 +157,8 @@ public final class DeliveryBook {
             if (!courier.animals.removeIf(candidate -> candidate.id().equals(order.id()))) return false;
             courier.animalRevision++;
         }
-        courier.active = new Active(order, quote.reward(), Math.addExact(runningMillis, config.deliveryTimeoutSeconds * 1000L));
+        courier.active = new Active(order, quote.reward(), Math.addExact(runningMillis, config.deliveryTimeoutSeconds * 1000L),
+                quote.orderMultiplier().multiply(config.eventActive ? MeituanConfig.EVENT_MULTIPLIER : BigDecimal.ONE));
         return true;
     }
 
@@ -167,7 +187,9 @@ public final class DeliveryBook {
         List<Line> lines = new ArrayList<>();
         for (String id : selected) {
             MeituanConfig.Food food = config.foods.get(id);
-            lines.add(new Line(id, (3 + random.nextInt(5)) * food.quantityMultiplier, food.price.multiply(config.basePriceMultiplier),
+            double roll = random.nextDouble();
+            int baseCount = 1 + (int) (7 * roll * roll);
+            lines.add(new Line(id, baseCount * food.quantityMultiplier, food.price.multiply(config.basePriceMultiplier),
                     new LinkedHashMap<>(food.bonuses), food.prank));
         }
         BigDecimal hot = BigDecimal.ONE;

@@ -17,16 +17,36 @@ public final class DeliveryRulesTest {
         if (!ok) throw new AssertionError(name);
     }
     private static BigDecimal decimal(String value) { return new BigDecimal(value); }
+    private static Line line(String item, int count) { return new Line(item, count, BigDecimal.ONE, Map.of(), false); }
     private static Menu simpleMenu() { return new Menu(List.of(new Line("test:pie", 3, decimal("16"), Map.of(), false)), BigDecimal.ONE); }
     private static Order animal(Point point, long expiry) { return new Order(UUID.randomUUID(), null, "绵羊-0001", point, simpleMenu(), expiry); }
     private static void fill(DeliveryBook book, UUID viewer, long expiry) {
         while (book.courier(viewer).animals.size() < 5) book.addAnimal(viewer, animal(new Point(20, 70, 20), expiry));
     }
+    private static void checkFoodGroups() {
+        MeituanConfig grouped = new MeituanConfig();
+        grouped.foodGroups = Map.of("test:candy", List.of("test:candy_1", "test:candy_2"));
+        grouped.validate();
+        var groupedLines = List.of(line("test:candy", 4));
+        var accepted = grouped.acceptedItems(groupedLines);
+        var mixedStock = List.of(new DeliveryInventory.Stock(accepted.get("test:candy_1"), 2, 0),
+                new DeliveryInventory.Stock(accepted.get("test:other"), 8, -1),
+                new DeliveryInventory.Stock(accepted.get("test:candy_2"), 2, 0));
+        check(java.util.Arrays.equals(DeliveryInventory.plan(mixedStock, groupedLines).removal(), new int[]{2,0,2}), "mixed fillings, no other shell");
+        check(DeliveryInventory.plan(mixedStock, List.of(line("test:candy", 5))) == null, "group shortages");
+        check(grouped.acceptedItems(List.of(line("test:candy_1", 1))).equals(Map.of("test:candy_1", "test:candy_1")), "legacy exact-ID order");
+        grouped.foods.put("test:candy_1", new MeituanConfig.Food());
+        boolean rejected = false;
+        try { grouped.validate(); } catch (IllegalArgumentException expected) { rejected = true; }
+        check(rejected, "a variant cannot add a second lottery entry");
+    }
+
     public static void main(String[] args) throws Exception {
         MeituanConfig config = new MeituanConfig();
         config.validate();
         check(config.foods.size() == 3 && config.animals.size() == 27, "approved initial food/name counts");
         for (int n = 0; n < 12; n++) check(target(n) == Math.max(0, Math.min(7 - n, 5)), "rolling target " + n);
+        checkFoodGroups();
         long now = 100 * DAY;
         UUID viewer = UUID.randomUUID(), owner = UUID.randomUUID();
         DeliveryBook book = new DeliveryBook();
@@ -138,7 +158,7 @@ public final class DeliveryRulesTest {
             Menu menu = menu(config, random);
             check(menu.hot().compareTo(decimal("1.5")) >= 0 && menu.hot().compareTo(decimal("2.50")) <= 0 && menu.hot().scale() == 2, "hot bounds/precision");
             check(menu.lines().size() >= 1 && menu.lines().size() <= 3 && menu.lines().stream().map(Line::item).distinct().count() == menu.lines().size(), "distinct food types");
-            for (Line line : menu.lines()) check(line.count() >= 12 && line.count() <= 28 && line.count() % 4 == 0, "quantity multiplier");
+            for (Line line : menu.lines()) check(line.count() >= 4 && line.count() <= 28 && line.count() % 4 == 0, "quantity multiplier");
         }
         MeituanConfig pool = new MeituanConfig();
         String favorite = pool.foods.keySet().iterator().next();
@@ -206,13 +226,35 @@ public final class DeliveryRulesTest {
         boolean allSidesRejected = false;
         try { mixed.validate(); } catch (IllegalArgumentException expected) { allSidesRejected = true; }
         check(allSidesRejected, "reject impossible all-side pool at configuration load");
-        var stock = List.of(new DeliveryInventory.Stock("a", 2, true), new DeliveryInventory.Stock("a", 64, false),
-                new DeliveryInventory.Stock("a", 3, true), new DeliveryInventory.Stock("b", 2, true));
-        check(DeliveryInventory.plan(stock, Map.of("a", 6, "b", 1)) == null, "NBT-altered stock excluded; insufficient total removes nothing");
-        check(DeliveryInventory.plan(stock, Map.of("a", 4, "b", 3)) == null, "second food shortage is atomic");
-        int[] plan = DeliveryInventory.plan(stock, Map.of("a", 4, "b", 2));
+        var stock = List.of(new DeliveryInventory.Stock("a", 2, 0), new DeliveryInventory.Stock("a", 64, -1),
+                new DeliveryInventory.Stock("a", 3, 1), new DeliveryInventory.Stock("b", 2, 2));
+        check(DeliveryInventory.plan(stock, List.of(line("a", 6), line("b", 1))) == null, "NBT-altered stock excluded; insufficient total removes nothing");
+        check(DeliveryInventory.plan(stock, List.of(line("a", 4), line("b", 3))) == null, "second food shortage is atomic");
+        int[] plan = DeliveryInventory.plan(stock, List.of(line("a", 4), line("b", 2))).removal();
         check(java.util.Arrays.equals(plan, new int[]{2, 0, 2, 2}), "split-stack exact removal leaves surplus");
         check(stock.get(0).count() == 2 && stock.get(2).count() == 3, "planning does not mutate inventory");
+        MeituanConfig festival = new MeituanConfig();
+        festival.eventActive = true;
+        Point far = new Point(900, 64, 0);
+        var qualityBook = new DeliveryBook();
+        var requestForFood = qualityBook.request(owner, "owner", far);
+        Line dish = new Line("test:dish", 15, decimal("8"), Map.of("个人", decimal("1.25")), false);
+        var feast = new Order(requestForFood.id(), owner, "owner", far, new Menu(List.of(dish), decimal("2")), 0);
+        Quote feastQuote = quote(feast, 0, 0, festival);
+        check(qualityBook.accept(viewer, feastQuote, festival), "accepted premium quote");
+        var accepted = qualityBook.courier(viewer).active;
+        var mixedStock = List.of(new DeliveryInventory.Stock("test:dish", 2, 0), new DeliveryInventory.Stock("test:dish", 3, 0),
+                new DeliveryInventory.Stock("test:dish", 4, 1), new DeliveryInventory.Stock("test:dish", 5, 2),
+                new DeliveryInventory.Stock("test:dish", 4, 0));
+        var mixedPlan = DeliveryInventory.plan(mixedStock, List.of(dish));
+        check(java.util.Arrays.equals(mixedPlan.removal(), new int[]{2,3,4,5,1}), "mixed grades, consume only ordered quantity");
+        BigDecimal premium = mixedPlan.premium();
+        festival.eventActive = false;
+        check(accepted.reward() == 1350 && accepted.qualityReward(premium, festival) == 630, "locked far/player/hot/event stack on individual premium");
+        check(accepted.qualityReward(decimal("0.19"), festival) == 1, "floor premium once after applying all multipliers");
+        var legacy = new Active(feast, accepted.reward(), accepted.deadline(), null);
+        check(legacy.qualityReward(premium, festival) == 630, "legacy order retains its accepted event boost");
+        check(accepted.qualityReward(BigDecimal.ZERO, festival) == 0, "ordinary dishes earn only the locked payout");
         var path = Files.createTempFile("meituan-config-test-", ".json");
         try {
             Files.writeString(path, "{\"railwayDataProtection\":true}");

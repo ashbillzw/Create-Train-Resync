@@ -23,6 +23,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -37,10 +38,11 @@ import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.items.ItemHandlerHelper;
+import net.minecraftforge.items.wrapper.InvWrapper;
 import org.slf4j.Logger;
 
 import java.math.BigDecimal;
@@ -48,12 +50,14 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -78,8 +82,11 @@ public final class MeituanService {
     private final MeituanConfig config;
     private final DeliveryData data;
     private final DeliveryBook book;
+    private RecipeManager qualityRecipes;
+    private Set<Item> qualityFoods = Set.of();
     private final Random random = new Random();
     private final Map<UUID, Preview> previews = new HashMap<>();
+    private Set<UUID> previousMarkerViewers = Set.of();
     private final LinkedHashMap<UUID, FillJob> jobs = new LinkedHashMap<>();
     private long lastNanos = System.nanoTime();
     private int ticks;
@@ -91,7 +98,10 @@ public final class MeituanService {
         data = level.getDataStorage().computeIfAbsent(DeliveryData::load, DeliveryData::new, "trainresync_meituan");
         if (data.readError != null) throw new IllegalStateException("Meituan save is unreadable; preserved without overwrite", data.readError);
         book = data.book;
-        for (String id : config.foods.keySet()) item(id);
+        for (String id : config.foods.keySet()) {
+            item(id);
+            config.foodGroups.getOrDefault(id, List.of()).forEach(MeituanService::item);
+        }
         for (String coin : COINS) item("numismatics:" + coin);
     }
 
@@ -123,22 +133,26 @@ public final class MeituanService {
     }
 
     @SubscribeEvent public static void commands(RegisterCommandsEvent event) {
-        registerCommands(event, "meituan", "diancan", "quxiaodiancan", "jiedan", "songda");
-        registerCommands(event, "美团", "点餐", "取消点餐", "接单", "送达");
-        registerCommands(event, "niijima-delivery", "order", "cancel", "accept", "deliver");
+        registerCommands(event, "meituan", "diancan", "quxiaodiancan", "jiedan", "songda", "chakandingdan");
+        registerCommands(event, "美团", "点餐", "取消点餐", "接单", "送达", "查看订单");
+        registerCommands(event, "niijima-delivery", "order", "cancel", "accept", "deliver", "status");
+        event.getDispatcher().register(Commands.literal("niijima-debug")
+                .requires(source -> source.hasPermission(2) && SERVICES.containsKey(source.getServer()))
+                .then(Commands.literal("meituan")
+                        .then(Commands.literal("resetCooldown")
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .executes(context -> resetCooldown(context.getSource(), EntityArgument.getPlayer(context, "player")))))));
     }
 
-    private static void registerCommands(RegisterCommandsEvent event, String root, String order, String cancel, String accept, String deliver) {
+    private static void registerCommands(RegisterCommandsEvent event, String root, String order, String cancel,
+                                         String accept, String deliver, String status) {
         event.getDispatcher().register(Commands.literal(root)
                 .requires(source -> SERVICES.containsKey(source.getServer()))
                 .executes(context -> run(context.getSource(), "jiedan", null))
-                .then(Commands.literal("debug").requires(source -> source.hasPermission(2))
-                        .then(Commands.literal("resetCooldown")
-                                .then(Commands.argument("player", EntityArgument.player())
-                                        .executes(context -> resetCooldown(context.getSource(), EntityArgument.getPlayer(context, "player"))))))
                 .then(Commands.literal(order).executes(context -> run(context.getSource(), "diancan", null)))
                 .then(Commands.literal(cancel).executes(context -> run(context.getSource(), "quxiaodiancan", null)))
                 .then(Commands.literal(deliver).executes(context -> run(context.getSource(), "songda", null)))
+                .then(Commands.literal(status).executes(context -> run(context.getSource(), "status", null)))
                 .then(Commands.literal(accept).executes(context -> run(context.getSource(), "jiedan", null))
                         .then(Commands.argument("id", StringArgumentType.greedyString())
                                 .executes(context -> run(context.getSource(), "jiedan", StringArgumentType.getString(context, "id"))))));
@@ -167,6 +181,10 @@ public final class MeituanService {
                 case "diancan" -> service.request(player);
                 case "quxiaodiancan" -> service.cancel(player);
                 case "songda" -> service.deliver(player);
+                case "status" -> {
+                    Courier courier = service.book.couriers.get(player.getUUID());
+                    activeMessage(player, courier == null ? null : courier.active, false);
+                }
                 default -> service.listOrAccept(player, id);
             }
             service.data.setDirty();
@@ -266,7 +284,7 @@ public final class MeituanService {
     private void listOrAccept(ServerPlayer player, String rawId) {
         UUID viewer = player.getUUID();
         Courier courier = book.courier(viewer);
-        if (courier.active != null) { activeMessage(player, "当前还有未完成订单！", courier.active); return; }
+        if (courier.active != null) { activeMessage(player, courier.active, false); return; }
         Preview previous = previews.get(viewer);
         int index = -1;
         String[] args = rawId == null ? new String[0] : rawId.trim().split(" ", 2);
@@ -295,7 +313,7 @@ public final class MeituanService {
         Quote selected = current.rows().get(index);
         if (!book.accept(viewer, selected, config)) { message(player, CHANGED); show(player); return; }
         previews.remove(viewer);
-        activeMessage(player, "已接单！", courier.active);
+        activeMessage(player, courier.active, true);
         if (selected.order().owner() != null)
             notifyOnline(selected.order().owner(), "订单已被" + player.getGameProfile().getName() + "接单！");
     }
@@ -320,7 +338,7 @@ public final class MeituanService {
         data.setDirty();
         if (preview.rows().isEmpty()) { message(player, "暂无可接订单。"); return; }
         var table = Component.empty().append(Component.translatableWithFallback(OFFER_ROW,
-                "%s%s | %s | %s%s", "", "客户", "价格", "距离", "").withStyle(ChatFormatting.GRAY));
+                "%s%s | %s | %s%s", "", "顾客", "价格", "距离", "").withStyle(ChatFormatting.GRAY));
         for (int i = 0; i < preview.rows().size(); i++) {
             Quote quote = preview.rows().get(i);
             MutableComponent price = Component.literal(quote.reward() + "元");
@@ -342,42 +360,49 @@ public final class MeituanService {
 
     private MutableComponent offerDetails(Quote quote) {
         Order order = quote.order();
-        MutableComponent details = Component.literal(order.name());
+        MutableComponent details = Component.literal("顾客：" + order.name());
         for (Line line : order.menu().lines()) {
-            details.append("\n").append(orderItemName(line)).append(" ×" + line.count());
+            details.append("\n").append(orderItemLine(line));
             line.bonuses().forEach((name, value) -> {
                 if (value.compareTo(BigDecimal.ONE) != 0) details.append("（" + name + "×" + number(value) + "）");
             });
         }
-        details.append("\n" + number(quote.base()) + "元");
-        // Item-specific bonuses stay attached to their food; they must not look like whole-order multipliers.
-        if (quote.base().compareTo(quote.subtotal()) != 0) details.append(" → " + number(quote.subtotal()) + "元");
-        if (order.menu().hot().compareTo(BigDecimal.ONE) != 0) details.append(" ×" + number(order.menu().hot()) + "火爆");
-        if (quote.far()) details.append(" ×" + number(config.farMultiplier) + "远单");
-        if (order.owner() != null) details.append(" ×" + number(config.playerMultiplier) + "玩家单");
-        if (config.eventActive) details.append(" ×" + number(MeituanConfig.EVENT_MULTIPLIER) + "活动期间");
-        return details.append(" → " + quote.reward() + "元");
+        return details.append("\n" + offerPrice(quote, config));
     }
 
-    private static Component orderItemName(Line line) {
+    private static String offerPrice(Quote quote, MeituanConfig config) {
+        Order order = quote.order();
+        StringBuilder factors = new StringBuilder();
+        if (order.menu().hot().compareTo(BigDecimal.ONE) != 0) factors.append(" ×").append(number(order.menu().hot())).append("火爆");
+        if (quote.far() && config.farMultiplier.compareTo(BigDecimal.ONE) != 0) factors.append(" ×").append(number(config.farMultiplier)).append("远单");
+        if (order.owner() != null && config.playerMultiplier.compareTo(BigDecimal.ONE) != 0) factors.append(" ×").append(number(config.playerMultiplier)).append("玩家单");
+        if (config.eventActive) factors.append(" ×").append(number(MeituanConfig.EVENT_MULTIPLIER)).append("活动期间");
+
+        String reward = quote.reward() + "元";
+        boolean itemBonus = quote.base().compareTo(quote.subtotal()) != 0;
+        if (factors.isEmpty() && !itemBonus) return reward;
+        String base = number(quote.base()) + "元";
+        if (itemBonus && !factors.isEmpty()) base += " → " + number(quote.subtotal()) + "元";
+        return base + factors + " → " + reward;
+    }
+
+    private static MutableComponent orderItemLine(Line line) {
         var stack = new ItemStack(item(line.item()));
         var name = stack.getHoverName().copy().withStyle(style -> style.withUnderlined(true).withInsertion(DISH_LINK)
                 .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_ITEM, new HoverEvent.ItemStackInfo(stack))));
-        return line.prank() ? name.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD) : name;
+        if (line.prank()) name.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
+        String mod = new ResourceLocation(line.item()).getNamespace();
+        var source = Component.translatableWithFallback("trainresync.meituan.mod." + mod, mod);
+        return Component.empty().append(source.append("：").withStyle(ChatFormatting.GRAY))
+                .append(name).append(" ×" + line.count());
     }
 
-    private static void activeMessage(ServerPlayer player, String prefix, Active active) {
-        MutableComponent details = Component.literal(PREFIX + prefix + "定位 " + xyz(active.order().point()));
+    private static void activeMessage(ServerPlayer player, Active active, boolean justAccepted) {
+        if (active == null) { message(player, "当前没有订单。"); return; }
+        MutableComponent details = Component.literal(PREFIX + (justAccepted ? "已接单！" : "当前订单")
+                + "\n定位：" + xyz(active.order().point()) + "\n报酬：" + active.reward() + "元");
         for (Line line : active.order().menu().lines()) {
-            String namespace = new ResourceLocation(line.item()).getNamespace();
-            details.append("\n");
-            if (!namespace.equals("minecraft")) {
-                String modName = ModList.get().getModContainerById(namespace)
-                        .map(mod -> mod.getModInfo().getDisplayName()).orElse(namespace);
-                details.append(Component.translatableWithFallback("trainresync.meituan.mod." + namespace, modName)).append("：");
-            }
-            details.append(orderItemName(line))
-                    .append("（" + line.item() + "）×" + line.count());
+            details.append("\n").append(orderItemLine(line));
         }
         player.sendSystemMessage(details);
     }
@@ -392,21 +417,46 @@ public final class MeituanService {
         }
         List<ItemStack> inventory = new ArrayList<>(player.getInventory().items);
         inventory.addAll(player.getInventory().offhand);
-        List<ItemStack> foods = new ArrayList<>();
+        if (level.getRecipeManager() != qualityRecipes) {
+            qualityRecipes = level.getRecipeManager();
+            if (ForgeRegistries.RECIPE_SERIALIZERS.containsKey(new ResourceLocation("kaleidoscope_cookery", "flex_pot")))
+                qualityFoods = CuisineQuality.products(level);
+        }
+        List<Line> lines = active.order().menu().lines();
+        var accepted = config.acceptedItems(lines);
         List<DeliveryInventory.Stock> stock = new ArrayList<>();
         for (ItemStack stack : inventory) {
             String id = ForgeRegistries.ITEMS.getKey(stack.getItem()).toString();
-            boolean plain = !stack.isEmpty() && ItemStack.isSameItemSameTags(stack, new ItemStack(stack.getItem()));
-            stock.add(new DeliveryInventory.Stock(id, stack.getCount(), plain));
+            int bonusHalves = -1;
+            String orderedItem = accepted.get(id);
+            if (!stack.isEmpty() && orderedItem != null) {
+                if (ItemStack.isSameItemSameTags(stack, new ItemStack(stack.getItem()))) bonusHalves = 0;
+                else if (qualityFoods.contains(stack.getItem())) bonusHalves = CuisineQuality.bonusHalves(stack);
+            }
+            stock.add(new DeliveryInventory.Stock(orderedItem, stack.getCount(), bonusHalves));
         }
-        Map<String, Integer> needed = new LinkedHashMap<>();
-        for (Line line : active.order().menu().lines()) {
-            needed.merge(line.item(), line.count(), Math::addExact);
-            split(foods, item(line.item()), line.count());
+        var plan = DeliveryInventory.plan(stock, lines);
+        if (plan == null) {
+            MutableComponent details = Component.literal(PREFIX + "背包中没有足够的餐品！");
+            for (Line line : lines) {
+                int available = stock.stream().filter(s -> s.bonusHalves() >= 0 && s.item().equals(line.item()))
+                        .mapToInt(DeliveryInventory.Stock::count).sum();
+                details.append("\n").append(orderItemLine(line)).append("（已有" + available + "）");
+            }
+            player.sendSystemMessage(details);
+            return;
         }
-        int[] removal = DeliveryInventory.plan(stock, needed);
-        if (removal == null) { message(player, "背包中没有足够的餐品！"); return; }
-        List<ItemStack> money = payout(active.reward()); // Resolve all items before changing any inventory slot.
+        List<ItemStack> foods = new ArrayList<>();
+        boolean qualityDish = false;
+        int[] removal = plan.removal();
+        for (int i = 0; i < removal.length; i++) {
+            if (removal[i] == 0) continue;
+            ItemStack stack = inventory.get(i);
+            qualityDish |= qualityFoods.contains(stack.getItem());
+            if (active.order().owner() != null) foods.add(stack.copyWithCount(removal[i]));
+        }
+        long qualityReward = active.qualityReward(plan.premium(), config);
+        List<ItemStack> money = payout(Math.addExact(active.reward(), qualityReward));
         for (int i = 0; i < removal.length; i++) inventory.get(i).shrink(removal[i]);
         player.getInventory().setChanged();
         player.containerMenu.broadcastChanges();
@@ -422,6 +472,8 @@ public final class MeituanService {
                 point.x() + 0.5, point.y() + 1, point.z() + 0.5, 25, 0.5, 0.5, 0.5, 0.05);
         for (ItemStack stack : money) drop(stack, player.getX(), player.getY(), player.getZ());
         message(player, "成功送达！报酬" + active.reward() + "元已发放。");
+        if (plan.premium().signum() > 0) message(player, "森罗菜品「品质」额外奖励！" + qualityReward + "元。");
+        else if (qualityDish) message(player, "提升森罗菜品的「品质」有机会获得额外奖励哦！");
     }
 
     private void deliverFood(Point point, List<ItemStack> foods) {
@@ -429,10 +481,10 @@ public final class MeituanService {
         ChestBlockEntity chest = null;
         if (available(pos) && level.setBlock(pos, Blocks.CHEST.defaultBlockState(), 3)
                 && level.getBlockEntity(pos) instanceof ChestBlockEntity created) chest = created;
-        int slot = 0;
+        InvWrapper receiver = chest == null ? null : new InvWrapper(chest);
         for (ItemStack stack : foods) {
-            if (chest != null && slot < chest.getContainerSize()) chest.setItem(slot++, stack);
-            else drop(stack, point.x() + 0.5, point.y() + 0.2, point.z() + 0.5);
+            ItemStack remaining = receiver == null ? stack : ItemHandlerHelper.insertItemStacked(receiver, stack, false);
+            if (!remaining.isEmpty()) drop(remaining, point.x() + 0.5, point.y() + 0.2, point.z() + 0.5);
         }
         if (chest != null) chest.setChanged();
     }
@@ -474,18 +526,25 @@ public final class MeituanService {
     }
 
     private void markers() {
-        for (Request request : book.requests.values()) marker(request.owner(), request.point());
+        Map<UUID, Set<BlockPos>> visible = new HashMap<>();
+        for (Request request : book.requests.values()) marker(visible, request.owner(), request.point());
         for (Map.Entry<UUID, Courier> entry : book.couriers.entrySet()) {
             Active active = entry.getValue().active;
             if (active == null) continue;
-            marker(entry.getKey(), active.order().point());
-            if (active.order().owner() != null) marker(active.order().owner(), active.order().point());
+            marker(visible, entry.getKey(), active.order().point());
+            if (active.order().owner() != null) marker(visible, active.order().owner(), active.order().point());
         }
+        visible.forEach((viewer, points) -> DeliveryMarkers.send(server.getPlayerList().getPlayer(viewer), points));
+        for (UUID viewer : previousMarkerViewers) {
+            if (!visible.containsKey(viewer)) DeliveryMarkers.send(server.getPlayerList().getPlayer(viewer), Set.of());
+        }
+        previousMarkerViewers = Set.copyOf(visible.keySet());
     }
 
-    private void marker(UUID viewer, Point point) {
+    private void marker(Map<UUID, Set<BlockPos>> visible, UUID viewer, Point point) {
         ServerPlayer player = server.getPlayerList().getPlayer(viewer);
         if (player == null || player.level() != level || point.squaredDistance(player.getX(), player.getY(), player.getZ()) > 128 * 128) return;
+        if (!visible.computeIfAbsent(viewer, ignored -> new HashSet<>()).add(new BlockPos(point.x(), point.y(), point.z()))) return;
         level.sendParticles(player, ParticleTypes.END_ROD, true, point.x() + 0.5, point.y() + 1.2, point.z() + 0.5,
                 3, 0.15, 0.25, 0.15, 0.005);
     }

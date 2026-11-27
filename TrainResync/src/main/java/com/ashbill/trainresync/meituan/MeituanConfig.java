@@ -9,6 +9,8 @@ import java.io.Reader;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +39,8 @@ public final class MeituanConfig {
     public List<String> animals = List.of("美西螈", "骆驼", "猫", "鸡", "牛", "苦力怕", "驴", "末影人",
             "狐狸", "山羊", "守卫者", "马", "铁傀儡", "羊驼", "哞菇", "骡", "豹猫", "熊猫", "鹦鹉",
             "猪", "北极熊", "兔子", "绵羊", "嗅探兽", "雪傀儡", "监守者", "狼");
+    // Only the representative can be listed in foods. An empty group list preserves exact-ID delivery.
+    public Map<String, List<String>> foodGroups = Map.of();
     public Map<String, Food> foods = new LinkedHashMap<>();
 
     public MeituanConfig() {
@@ -83,8 +87,16 @@ public final class MeituanConfig {
         require(animalMinSeconds > 0 && animalMaxSeconds >= animalMinSeconds && animalMaxSeconds <= 86400, "animal expiry");
         require(animals != null && !animals.isEmpty() && animals.stream().allMatch(s -> s != null && !s.isBlank()), "animals");
         require(foods != null && !foods.isEmpty(), "foods");
+        var members = new HashSet<String>();
+        foodGroups.forEach((representative, variants) -> {
+            require(validItemId(representative) && variants != null, "food group");
+            for (String id : variants) {
+                require(validItemId(id) && !foodGroups.containsKey(id) && !foods.containsKey(id)
+                        && members.add(id), "duplicate or invalid food group member: " + id);
+            }
+        });
         foods.forEach((id, food) -> {
-            require(id != null && id.matches("[a-z0-9_.-]+:[a-z0-9_./-]+") && food != null, "food ID");
+            require(validItemId(id) && food != null, "food ID");
             require(positive(food.price) && food.quantityMultiplier > 0 && food.quantityMultiplier <= 64, "food price/quantity");
             require(food.bonuses != null, "food bonuses");
             food.bonuses.forEach((name, value) -> require(name != null && !name.isBlank() && positive(value), "food bonus"));
@@ -92,6 +104,18 @@ public final class MeituanConfig {
         require(foods.values().stream().anyMatch(food -> !food.sideDish && !food.prank), "foods must include a non-side dish");
     }
 
+    Map<String, String> acceptedItems(List<DeliveryBook.Line> lines) {
+        Map<String, String> accepted = new HashMap<>();
+        // A previously saved order may still ask for an individual variant.
+        for (var line : lines) accepted.put(line.item(), line.item());
+        for (var line : lines) {
+            for (String variant : foodGroups.getOrDefault(line.item(), List.of()))
+                accepted.putIfAbsent(variant, line.item());
+        }
+        return accepted;
+    }
+
+    private static boolean validItemId(String id) { return id != null && id.matches("[a-z0-9_.-]+:[a-z0-9_./-]+"); }
     private static boolean probability(double value) { return Double.isFinite(value) && value >= 0 && value <= 1; }
     private static boolean positive(BigDecimal value) { return value != null && value.signum() > 0 && value.compareTo(new BigDecimal("1000000")) <= 0; }
     private static void require(boolean valid, String field) { if (!valid) throw new IllegalArgumentException("Invalid " + field); }

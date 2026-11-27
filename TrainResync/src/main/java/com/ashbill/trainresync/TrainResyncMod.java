@@ -21,6 +21,7 @@ public class TrainResyncMod {
     }
 
     public TrainResyncMod() {
+        com.ashbill.trainresync.meituan.DeliveryMarkers.init();
         if (net.minecraftforge.fml.ModList.get().isLoaded("numismatics")) {
             com.ashbill.trainresync.currency.CurrencyBalance.init();
             DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> com.ashbill.trainresync.currency.CurrencyHud::init);
