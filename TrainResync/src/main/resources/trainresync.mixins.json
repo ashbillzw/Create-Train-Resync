@@ -83,6 +83,7 @@
     "vanilla.DedicatedServerRconMixin"
   ],
   "client": [
+    "search.fruitsdelight.FruitFluidMixin",
     "search.CreativeSearchBoxAccessor",
     "search.modernfix.LazySearchTreeAccessor",
     "search.modernfix.CreativeSearchPrefixMixin",

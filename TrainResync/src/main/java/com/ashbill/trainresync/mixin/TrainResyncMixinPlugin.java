@@ -27,6 +27,7 @@ public class TrainResyncMixinPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         LoadingModList mods = LoadingModList.get();
         String prefix = "com.ashbill.trainresync.mixin.";
+        if (mixinClassName.startsWith(prefix + "search.fruitsdelight.")) return hasMods(mods, "jei", "fruitsdelight");
         if (mixinClassName.startsWith(prefix + "search.modernfix.")) return hasMods(mods, "jei", "modernfix");
         if (mixinClassName.startsWith(prefix + "search.")) return hasMods(mods, "jei");
 
