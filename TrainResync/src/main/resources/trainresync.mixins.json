@@ -26,6 +26,7 @@
     "cauldron.HeatableBlockEntityMixin",
     "cauldron.tavern.LavaCauldronTapBehaviorMixin",
     "cauldron.LayeredCauldronBlockMixin",
+    "cauldron.WaterCauldronSoundMixin",
     "cauldron.LiquidCauldronBlockMixin",
     "cauldron.MilkCauldronBlockMixin",
     "cauldron.MilkPipeMixin",

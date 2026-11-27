@@ -2,6 +2,8 @@ package com.ashbill.trainresync.compat.cauldron;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUtils;
@@ -107,6 +109,7 @@ public final class MilkIntegration {
                 && tile.getSoftFluidTank().getFluid().is(net.mehvahdjukaar.amendments.reg.ModTags.CAN_GLOW)) {
             if (!world.isClientSide && !tile.isGlowing()) {
                 tile.setGlowing(true);
+                world.playSound(null, pos, SoundEvents.BUBBLE_COLUMN_BUBBLE_POP, SoundSource.BLOCKS, 0.8F, 1.0F);
                 if (!event.getEntity().isCreative()) event.getItemStack().shrink(1);
                 world.gameEvent(event.getEntity(), GameEvent.BLOCK_CHANGE, pos);
             }
