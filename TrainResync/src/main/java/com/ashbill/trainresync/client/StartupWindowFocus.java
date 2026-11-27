@@ -7,6 +7,8 @@ import com.sun.jna.platform.win32.WinDef.DWORD;
 import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef.HWND;
+import com.sun.jna.platform.win32.WinNT.HANDLE;
+import com.sun.jna.platform.win32.WinBase;
 import de.keksuccino.fancymenu.customization.customgui.CustomGuiBaseScreen;
 import de.keksuccino.fancymenu.customization.screen.identifier.ScreenIdentifierHandler;
 import de.keksuccino.fancymenu.events.screen.RenderScreenEvent;
@@ -115,21 +117,55 @@ public final class StartupWindowFocus {
 
     private static final class DrippySplash {
         private static boolean pending = true;
+        private static final String channel = "Local\\Niijima.StartupFocus." + ProcessHandle.current().pid();
+        // Keep the decision visible to a late launcher poll for this JVM's lifetime.
+        private static HANDLE decision;
 
         static void listen() {
             EventHandler.INSTANCE.registerListener(event -> {
                 if (!pending) return;
                 Minecraft game = Minecraft.getInstance();
-                if (game.getOverlay() == null) {
-                    pending = false; // A later resource reload can show the same splash.
-                    return;
-                }
                 Screen screen = ((RenderScreenEvent.Post) event).getScreen();
-                if (!ScreenIdentifierHandler.isIdentifierOfScreen("drippy_loading_overlay", screen)) return;
-                pending = false;
-                if (ChlorideConfig.fullScreen == Borderless.Mode.FULLSCREEN && game.getWindow().isFullscreen())
+                boolean loading = game.getOverlay() != null;
+                if (loading && !ScreenIdentifierHandler.isIdentifierOfScreen("drippy_loading_overlay", screen)) return;
+                if (claimStartup() && loading && ChlorideConfig.fullScreen == Borderless.Mode.FULLSCREEN && game.getWindow().isFullscreen())
                     WindowsFocus.present(game.getWindow().getWindow(), false);
             }, RenderScreenEvent.Post.class);
+        }
+
+        private static boolean claimStartup() {
+            Kernel32 api = Kernel32.INSTANCE;
+            HANDLE gate = api.CreateMutex(null, false, channel + ".gate");
+            if (gate != null) {
+                try {
+                    int wait = api.WaitForSingleObject(gate, 0);
+                    if (wait == com.sun.jna.platform.win32.WinError.WAIT_TIMEOUT) return false; // Retry next frame.
+                    if (wait == WinBase.WAIT_OBJECT_0 || wait == WinBase.WAIT_ABANDONED) {
+                        try {
+                            decision = api.CreateEvent(null, true, false, channel + ".closed");
+                            if (decision != null) {
+                                int state = api.WaitForSingleObject(decision, 0);
+                                if (state == WinBase.WAIT_OBJECT_0) {
+                                    pending = false;
+                                    LogUtils.getLogger().info("Skipping Drippy focus after confirmed launcher handoff");
+                                    return false;
+                                }
+                                if (state == com.sun.jna.platform.win32.WinError.WAIT_TIMEOUT && api.SetEvent(decision)) {
+                                    pending = false;
+                                    return true;
+                                }
+                            }
+                        } finally {
+                            api.ReleaseMutex(gate);
+                        }
+                    }
+                } finally {
+                    api.CloseHandle(gate);
+                }
+            }
+            pending = false;
+            LogUtils.getLogger().warn("Cannot coordinate launcher focus; skipping Drippy focus");
+            return false;
         }
     }
 
