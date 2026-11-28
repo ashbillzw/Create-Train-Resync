@@ -34,7 +34,8 @@ public final class CauldronDrops {
         if (isOnCooldown(entity, world)) return false;
         var held = entity.getItem();
         var access = MilkIntegration.tank(world, pos);
-        ItemStack output = MilkConversions.apply(world, pos, held);
+        String product = MilkConversions.productFor(access == null ? "" : access.trainresync$content(), held);
+        ItemStack output = MilkConversions.apply(world, pos, access, product);
         if (output == null && held.getItem() instanceof DyeItem dye && CommonConfigs.DYE_WATER.get()) {
             if (access != null && access.trainresync$content().equals("water") && access.trainresync$milkAmount() == 1000) {
                 if (!world.setBlock(pos, ModRegistry.DYE_CAULDRON.get().defaultBlockState()

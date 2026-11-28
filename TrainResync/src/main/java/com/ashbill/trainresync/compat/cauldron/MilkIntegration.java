@@ -19,7 +19,6 @@ import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
 import net.minecraftforge.registries.ForgeRegistries;
-import net.hibiscus.naturespirit.registration.NSTags;
 
 /** Container bridge; pre-existing vanilla filled cauldrons are left intact. */
 public final class MilkIntegration {
@@ -130,13 +129,8 @@ public final class MilkIntegration {
         }
         String id = String.valueOf(ForgeRegistries.ITEMS.getKey(held.getItem()));
         var transfer = CauldronContainers.prepare(id, held, empty ? null : access);
-        boolean cheese = transfer.type().equals("milk") && held.is(NSTags.Items.CHEESE_MAKER);
-        String flavor = "";
-        for (String candidate : CauldronContents.FLAVORS) {
-            if (id.equals(CauldronContents.iceCreamId(candidate))) flavor = candidate;
-        }
-        boolean shake = transfer.type().equals("milk") && !flavor.isEmpty();
-        if (transfer.amount() == 0 && !cheese && !shake) {
+        String product = MilkConversions.productFor(transfer.type(), held);
+        if (transfer.amount() == 0 && product.isEmpty()) {
             InteractionResult result = WaterInteractions.interact(event, access);
             if (result != InteractionResult.PASS) {
                 event.setCanceled(true);
@@ -146,10 +140,10 @@ public final class MilkIntegration {
         }
         event.setCanceled(true);
         event.setCancellationResult(InteractionResult.FAIL);
-        if (cheese || shake) {
+        if (!product.isEmpty()) {
             if (transfer.stored() != 1000) return;
             if (!world.isClientSide) {
-                ItemStack remainder = MilkConversions.apply(world, pos, held);
+                ItemStack remainder = MilkConversions.apply(world, pos, access, product);
                 if (remainder == null) return;
                 if (remainder.isEmpty()) {
                     if (!event.getEntity().isCreative()) held.shrink(1);

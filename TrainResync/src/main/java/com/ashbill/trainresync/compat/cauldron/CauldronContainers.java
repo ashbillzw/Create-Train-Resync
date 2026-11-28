@@ -62,14 +62,6 @@ public final class CauldronContainers {
         if (sound != null) world.playSound(null, pos, sound, SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 
-    public static ItemStack transfer(Level world, BlockPos pos, ItemStack held, Entity actor) {
-        var tank = MilkIntegration.tank(world, pos);
-        boolean empty = MilkIntegration.plain(world.getBlockState(pos));
-        if (!empty && tank == null) return null;
-        var transfer = prepare(String.valueOf(ForgeRegistries.ITEMS.getKey(held.getItem())), held, empty ? null : tank);
-        return transfer.amount() > 0 && transfer.fits() ? transfer.execute(world, pos, held, actor, tank) : null;
-    }
-
     public static InteractionResultHolder<ItemStack> dispense(BlockSource source, ItemStack held) {
         var world = source.getLevel();
         var pos = source.getPos().relative(source.getBlockState().getValue(DispenserBlock.FACING));
