@@ -45,6 +45,7 @@
     "supplementaries.XPBottlingBehaviorMixin",
     "create.DoorMovingInteractionMixin",
     "create.ContraptionSeatMixin",
+    "create.ContraptionSeatDespawnMixin",
     "create.ContraptionCollisionMixin",
     "create.ContraptionHandlerMixin",
     "create.FluidNetworkMixin",
